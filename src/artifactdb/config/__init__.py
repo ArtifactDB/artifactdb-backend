@@ -30,7 +30,8 @@ class ArtifactDBConfigBase(PrintableYamlConfig):
         'prefixes': Attr('prefixes', list),
     }
 
-    artifactdb = artifactdb.__version__
+    # TODO: until __version__ is reworked as dict() of component's version
+    artifactdb = artifactdb.utils.__version__
     prefixes = ["/", ]
     doc_url = None
     logo_url = None
