@@ -6,6 +6,7 @@ Set of functions and helpers to deal with administration procedures
 
 import logging
 import copy
+from time import sleep
 from multiprocessing.pool import ThreadPool
 
 import requests
@@ -21,6 +22,42 @@ from artifactdb.utils.misc import process_coroutine
 from artifactdb.config.elasticsearch import ElasticsearchConfig
 
 
+
+def clean_internal_metadata(manager, pid):
+    manager.s3.clean_internal_metadata(pid)
+
+
+def wait_for_job_completion(admin_client, job_id, retry=20, delay=0.5):
+    status = None
+    for _ in range(retry):
+        response = admin_client.get("/jobs/{}".format(job_id))
+        assert response.status_code == 200, response.text
+        result = response.json()
+        if result["status"] in ("FAILURE","SUCCESS"):
+            # check if there's children group to deal task like "index_all", which produces children "index" tasks.
+            # not publishing tasks are also children, but they're not a children group containing other children,
+            # they're just tasks which were triggered while within a task
+            if result["children"] and "children" in result["children"][0]:
+                assert len(result["children"]) == 1, result["children"]
+                children = result["children"][0]["children"]
+                statuses = set()
+                for child in children:
+                    child_status = wait_for_job_completion(admin_client,child["task_id"],retry=60,delay=1)
+                    statuses.add(child_status)
+                if "FAILURE" in statuses:
+                    status = "FAILURE"
+                elif statuses == {"SUCCESS"}:
+                    status = "SUCCESS"
+                else:
+                    status = "UNKNOWN"
+            else:
+                status = result["status"]
+            # we got what we were looking for: a completion status
+            break
+        # still not completed
+        sleep(delay)
+
+    return status
 
 
 def update_es_mapping(client, skip_forbidden_op=False):
