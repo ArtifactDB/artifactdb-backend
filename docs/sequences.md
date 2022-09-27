@@ -49,18 +49,22 @@ Restricted pools can overlap a provisioned pool, in which case the overlapped ID
 process (in other words, restricted pools have precedence over provisioned pools).
 
 When starting for the first time, the ArtifactDB instance will create a provisioned pool ranging from 1 up to
-`max_sequence_id`, with 999'999'999 being the default (see configuration below for more).
+`max_sequence_id`, with 999'999'999 being the default, if `auto_create_pool` is true (default). See the
+[section](Configuration) below for more on sequence configuration).
 
-TODO: image pools
+TODO: image pools, provisioned active/inactive, restricted, overlapping
 
 
 ### Interfaces
 
 #### API endooint
 
-There are multiple REST endpoints involved.
+There are multiple REST endpoints involved. The first set involves endpoints which indirectly implies sequences, that
+is, when creating a new project and/or version.
 
-- `POST /projects/upload` is used to ask the instance to provision both a project ID and a version.
+TODO: link to "Uploading data and metadata" section
+
+- `POST /projects/upload` is used to ask the instance to provision both a project ID, as well as a first version.
 - `POST /projects/{project_id}/upload` is used to provision a new version within an existing project. It will fail if
   that project doesn't exist.
 - `POST /projects/{project_id}/version/{version}/upload`, see below the different use cases
@@ -78,10 +82,14 @@ endpoints will redirect to the one requiring `uploader` permissions. How so?  Th
 URL mechanism to temporarily promote the user's role to `uploader`, specifically and only for that request (the
 pre-signed upload URL can't be reused for other projects).
 
-TODO: other /sequences endpoints
-
-TODO: link to "Uploading data and metadata" section
 TODO: link to "Internal pre-signed URL" section
+
+Other endpoints can be used to collect information about the different sequences state. These require by default the
+role `admin`.
+
+- `GET /sequences` returns exhautive information for all sequence clients, including the project prefix, the provisioned
+  and restricted pools, the last provisioned ID, etc...
+- `GET /sequences/{project_id}/current_version` can be used to obtain the last version assigned to a give project ID.
 
 #### Configuration
 
@@ -90,28 +98,50 @@ Using a sequence requires to declare a list of configuration elements. Each elem
 roughly passed to `sqlalchemy.create_engine(...)` function. The remaining parameters drive the sequence behavior,
 specifically the project ID naming.
 
-```yaml
-  sequence:
-    - uri: postgresql+psycopg2://...
-      db_user: postgres
-      db_password: !include /app/run/secrets/pg/postgresql-password
-      schema_name: mysequence
-      project_prefix: PROJ
-      project_format: 'f"{project_prefix}{seq_id:09}"'
-      default: true
-    - ...
-```
-TODO: doc for max_sequence_id, version_first, auto_create_pool, default, debug
+The whole sequence configuration is declared under the root key `sequence`, containing a list of configuration elements,
+one element per sequence client:
 
-In this example, the `project_prefix` instruct that all project IDs will start with `PROJ`, while the f-string notation
-found in `project_format` adds 9 digits. The `seq_id` is passed by the sequence client itself and corresponds to the
-incremented integers returned by the SQL sequence itself. The whole f-string is then `eval`'d to obtain the final
-result. The version format is left to the sequence client implementation (default is an incremented integer).
+```yaml
+sequence:
+  # sequence client 1
+  - uri: ...
+    db_user: ...
+    ...
+  # sequence client 2
+  - uri: ...
+    db_user: ...
+```
+
+The sequence client can configured with the following parameter:
+
+| Parameter        | Description |
+| ---------        | ----------- |
+| `uri`            | sqlalchemy compliant database URI |
+| `db_user`        | username used for the database connection |
+| `db_password `   | password for that user (using "!include /path/to/secret" tag is recommended (TODO: link to config)|
+| `schema_name`    | schema name (postgres), or database name (mysql) |
+| `project_prefix` | short prefix for all project IDs, eg. PROJ, DS, etc...
+| `project_format` | project format rule, as f-string, ex: 'f"{project_prefix}{seq_id:09}"'. `seq_id` is passed by the
+|                  |  sequence client itself and corresponds to the incremented integer returned by the SQL sequence itself.
+|                  |  The whole f-string is then `eval`'d to obtain the final result. The version format is left to the
+|                  |  sequence client implementation (default is an incremented integer). |
+| `max_sequence_id` | upper limit for the project ID, defaulting to 999999999 |
+| `version_first`   | specifies the first version to provision for a new project, defaulting to "1" |
+| `auto_create_pool`  | upon fresh start, auto-create provisioned pool from [1,max_sequence_id] |
+| `default`         | if no sequence prefix is specified, instruct the `SequenceManager` to use this sequence by
+|                   | default |
+| `debug`           | activate SQL debug statements for troubleshooting |
+
+
+Also see `artifact.config.sequences` module and `SequenceConfig` class for more.
 
 #### Administration
 
-Sequences can be manipulated from an *admin* pod to perform maintenance operations. Because these operations are rare
+Sequences can be manipulated from an *admin* shell to perform maintenance operations. Because these operations are rare
 and critical, there are not available through endpoints. Let's see some examples.
+
+TODO: link to "admin shell"
+
 
 **Manipulating provisioned and restricted pool**
 
@@ -172,7 +202,33 @@ Out[16]:
 'RDB000000100'
 ```
 
+**Synchronizing sequence content**
+If there was an issue, such as loosing the SQL database, wrong manipulation of pools, or when an instance content was
+taken from another instance (eg. `aws s3 sync ...` between buckets), potential resulting in a desync with the sequence
+content, we can ask for a given sequence client to restore its content from the storage.
 
+```
+# we'll sync only the `RDB` sequence for example
+> seq_client = mgr.sequence_manager.clients["RDB"]
+# dry-run to first have a look at the situation
+> seq_client.sync(dryrun=True)
+DEBUG:root:Active storage: <S3Client bucket=some-bucket>
+DEBUG:root:Listing all projects in s3 starting with RDB
+...
+DEBUG:root:Listing artifacts/versions currently in sequence
+...
+Do you want to initialize the sequence 'RDB' with the following content? [y/N]
+...
+(some information about pools the sequence wants to create to match the storage content)
+...
 
-TODO: link to "admin pod"
+y
+Let's go...
+DEBUG:root:Skipping creation of provision pool
+INFO:root:Dry-run mode, rolling back
+# remove dry_run to proceed for real
+> seq_client.sync()
+...
+```
+
 
