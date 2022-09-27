@@ -110,6 +110,7 @@ class ArtifactDBConfigBase(PrintableYamlConfig):
         logging.getLogger("parso").setLevel(logging.ERROR)
         logging.getLogger("urllib3").setLevel(logging.ERROR)
         logging.getLogger("elasticsearch").setLevel(logging.ERROR)
+        logging.getLogger("blib2to3").setLevel(logging.ERROR)
         # when testing...
         logging.getLogger("pykwalify").setLevel(logging.ERROR)
         logging.getLogger("tavern").setLevel(logging.ERROR)
