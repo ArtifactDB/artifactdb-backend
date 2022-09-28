@@ -168,6 +168,18 @@ disable=raw-checker-failed,
         too-few-public-methods,
         consider-using-with,
         logging-format-interpolation,
+        raise-missing-from,
+        inconsistent-return-statements,
+        too-many-branches,
+        protected-access,
+        multiple-statements,
+        unsupported-membership-test,
+        too-many-arguments,
+        logging-not-lazy,
+        too-many-public-methods,
+        keyword-arg-before-vararg,
+        arguments-differ,
+        fixme,
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -373,7 +385,12 @@ function-naming-style=snake_case
 good-names=i,
            j,
            k,
+           v,
            ex,
+           e,
+           dt,
+           co,
+           kw,
            Run,
            _
 
