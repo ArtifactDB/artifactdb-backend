@@ -8,7 +8,6 @@ from gpapy.db.elastic.alias import update_es_aliases, CREATE_ALIAS, REMOVE_ALIAS
 from artifactdb.backend.components import BackendComponent
 
 
-
 class BackendElasticManager(BackendComponent, ElasticManager):
 
     NAME = "es"
@@ -17,6 +16,7 @@ class BackendElasticManager(BackendComponent, ElasticManager):
 
     def __init__(self, manager, cfg):
         self.main_cfg = cfg
+        self.front_es = None
         ElasticManager.__init__(self,self.main_cfg.es,"backend",self.main_cfg.es.scroll,
                                 self.main_cfg.es.switch,self.main_cfg.gprn,self.main_cfg.schema)
         logging.info("Using Elasticsearch config: {}".format(self.main_cfg.es.backend))
@@ -95,9 +95,9 @@ class BackendElasticManager(BackendComponent, ElasticManager):
             if info["status"] != SYNCED:
                 return False
         # empty report means there's no aliases found
-        return report and True or None
+        return True if report else None
 
-    def update_es_aliases(self, clients=None, ops=["create","move"],ask=True):
+    def update_es_aliases(self, clients=None, ops=("create","move"),ask=True):
         if clients:
             if isinstance(clients,str):  # it's a single client alias
                 clients = {clients:self.clients[clients]}

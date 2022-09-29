@@ -5,7 +5,7 @@ import logging.config
 from aumbry import Attr
 
 import artifactdb
-from .utils import PrintableYamlConfig, ApiConfigBaseHandler
+from .utils import PrintableYamlConfig, ApiConfigBaseHandler, init_model
 from .auth import AuthConfigBase
 from .cors import CorsConfig
 from .storages import set_storage_models, set_legacy_s3_config

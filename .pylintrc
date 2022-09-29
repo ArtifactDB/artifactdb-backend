@@ -179,6 +179,8 @@ disable=raw-checker-failed,
         too-many-public-methods,
         keyword-arg-before-vararg,
         arguments-differ,
+        too-many-instance-attributes,
+        too-many-locals,
         fixme,
 
 # Enable the message, report, category or checker with the given id(s). You can
@@ -390,6 +392,8 @@ good-names=i,
            e,
            dt,
            co,
+           es,
+           s3,
            kw,
            Run,
            _

@@ -8,6 +8,11 @@ from artifactdb.backend.components.sequences import SequenceManager
 from artifactdb.backend.components.storages import StorageManager
 from artifactdb.backend.components.indexers import BackendElasticManager
 from artifactdb.backend.components.permissions import InheritedPermissionManager, NoPermissionFoundError
+from artifactdb.backend.components.revisions import RevisionManager
+from artifactdb.backend.components.schemas import SchemaManager
+from artifactdb.backend.components.locks import LockManager
+from artifactdb.backend.components.inventories import S3InventoryManager
+from artifactdb.backend.components.queues import QueuesManager
 
 
 class ArtifactDBBackendManagerBase(BackendManagerBase):
@@ -17,9 +22,14 @@ class ArtifactDBBackendManagerBase(BackendManagerBase):
         {"class": StorageManager, "required": True},
         {"class": BackendElasticManager, "required": True},
         {"class": InheritedPermissionManager, "required": True},
+        {"class": RevisionManager, "required": True},
+        {"class": SchemaManager, "required": True},
+        {"class": LockManager, "required": True},
+        {"class": QueuesManager, "required": True},
         # Recommended but optionals
         {"class": SequenceManager, "required": False},
         {"class": PluginsManager, "required": False},
+        {"class": S3InventoryManager, "required": False},
     ]
 
     # TODO: eg. determine_permissions() and all permissions related methods could be part of the

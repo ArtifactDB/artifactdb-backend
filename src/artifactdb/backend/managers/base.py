@@ -1,9 +1,9 @@
+# pylint: disable=no-member  # manager gets patched with members from components registration
+# pylint: disable=unused-argument  # args no used but could be useful for context when inheriting
 import os
 import re
 import json
-from pprint import pformat
 from datetime import datetime
-from abc import ABC, ABCMeta, abstractmethod, abstractproperty
 
 import logging
 import jsondiff
@@ -11,17 +11,12 @@ import dateparser
 import backoff
 import elasticsearch.helpers.errors
 
-from gpapy.backend.revision import RevisionManager, NumericalRevisionProvider
 from gpapy.db.elastic import TransportError
-from gpapy.db.schema import SchemaClient, SchemaClientManager, NoSchemaError, ValidationError
+from gpapy.db.schema import NoSchemaError
 from gpapy.rest.auth import god
-from gpapy.backend.lock import LockManagerFactory
-from gpapy.backend.inventories import S3InventoryManager
-from gpapy.backend.queues import QueuesManager
 from gpapy.helpers.almighty import AlmightyHelper
 
 
-import gpapy.helpers.hermes
 from gpapy.helpers.hermes import HermesAPIError, HermesHelper
 from gpapy.helpers.atlas import get_atlas_helper
 from gpapy.helpers.keycloak import KeycloakHelper
@@ -29,13 +24,13 @@ from gpapy.helpers.keycloak import KeycloakHelper
 from artifactdb.backend.components import InvalidComponentError
 from artifactdb.backend.utils import generate_jsondiff_folder_key
 from artifactdb.backend.managers import BulkIndexException
-from artifactdb.utils.context import auth_user_context, storage_default_client_context
-from artifactdb.identifiers.aid import parse_key, pack_id, unpack_id
+from artifactdb.utils.context import auth_user_context
+from artifactdb.identifiers.aid import parse_key, pack_id
 
 
 class BackendManagerBase:
 
-    # Backend components can be added using build(...) method # or declared here, 
+    # Backend components can be added using build(...) method # or declared here,
     # as a list of {"class": path.to.component.Class, "required": bool}
     COMPONENTS = []
 
@@ -43,14 +38,15 @@ class BackendManagerBase:
         self.cfg = cfg
         self.celery_app = celery_app
         ####self.prepare_es_manager()
+        ####self.prepare_revision_manager()
         ####self.prepare_storage_manager()
-        self.prepare_schema_manager()
-        self.prepare_lock_manager()
+        ####self.prepare_schema_manager()
+        ####self.prepare_lock_manager()
         ####self.prepare_permissions_manager()
         ####self.prepare_sequence_manager()
-        self.prepare_s3_inventory_manager()
+        ####self.prepare_s3_inventory_manager()
         ####self.prepare_plugins_manager()
-        self.prepare_queues_manager()
+        ####self.prepare_queues_manager()
         # 3rd party integration
         self.prepare_keycloak_helper()
         self.prepare_almighty_helper()
@@ -58,7 +54,6 @@ class BackendManagerBase:
         self.prepare_atlas_helper()
 
         self.register_components()
-        self.prepare_revision_manager()
 
     def build(self, component_class, required=None):
         if hasattr(self,component_class.NAME):
@@ -96,25 +91,6 @@ class BackendManagerBase:
         defined.
         """
         return self.storage_manager.get_storage()
-
-    def prepare_schema_manager(self):
-        self.schema_manager = SchemaClientManager(self.cfg.schema)
-
-    def prepare_lock_manager(self):
-        self.lock_manager = LockManagerFactory.create(self.cfg.lock)
-    
-    def prepare_revision_manager(self):
-        self.revision_manager = RevisionManager(NumericalRevisionProvider,self.es)  # revision are integer by default
-
-    def prepare_s3_inventory_manager(self):
-        # optional S3 Inventory Manager (Some APIs does not have configuration for inventories)
-        if self.cfg.s3_inventory and self.cfg.s3_inventory.inventory_bucket:
-            self.s3_inventory = S3InventoryManager(self.cfg.s3_inventory)
-        else:
-            self.s3_inventory = None
-
-    def prepare_queues_manager(self):
-        self.queues = QueuesManager(self.cfg.celery, self.celery_app)
 
     def prepare_keycloak_helper(self):
         self.keycloak = None
@@ -174,20 +150,20 @@ class BackendManagerBase:
             logging.info("Preparing indexing id=%s [index=%s,doc_class=%s]",
                          esdoc._id,es_client.index_name,es_client.doc_class)
             bulk_per_clients.setdefault(es_client,[]).append(esdoc)
-        for client,docs in bulk_per_clients.items():
+        for client,cldocs in bulk_per_clients.items():
             try:
-                logging.info("Client {}, indexing {} documents".format(client,len(docs)))
-                client.bulk(docs,op="upsert", refresh=refresh)  # this will save existing fields from previous version
+                logging.info("Client {}, indexing {} documents".format(client,len(cldocs)))
+                client.bulk(cldocs,op="upsert", refresh=refresh)  # this will save existing fields from previous version
                                                # not set in these docs
             except TransportError as e:
                 # bulk op is too big? (ADB-147)
                 if e.status_code == 413:  # "Payload Too Large"
                     logging.info(f"Bulk operation too large {e.error}, indexing document one by one")
-                    client.index(docs)  # one by one
+                    client.index(cldocs)  # one by one
                 else:
                     push_err(e)
 
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except  # we want to know what happened, whatever the reason
                 logging.exception("Unable to index some documents: {}".format(repr(e)[:1000]))
                 push_err(e)
 
@@ -224,7 +200,7 @@ class BackendManagerBase:
             # file stored that we could use
             jrev = self.s3.get_revision(project_id,version)
             if jrev:
-                revision = jrev["revision"]  # as a string, not numerical revision 
+                revision = jrev["revision"]  # as a string, not numerical revision
             else:
                 logging.warning("No previously stored revision found for {}/{}".format(project_id,version))
 
@@ -247,8 +223,7 @@ class BackendManagerBase:
         except NoSchemaError as e:
             if self.cfg.schema.reject_when_no_schema:
                 raise
-            else:
-                logging.warning(e)
+            logging.warning(e)
 
     def validate_documents(self, docs):
         logging.info(f"Validating {len(docs)} documents")
@@ -265,13 +240,14 @@ class BackendManagerBase:
             # then we need to remove that info
             doc["_extra"]["transient"] = transient
 
-    def index_project(self, project_id, version=None, revision=None, permissions={}, skip_on_failure=False,
+    def index_project(self, project_id, version=None, revision=None, permissions=None, skip_on_failure=False,
                       transient=None):
         """Concurrent-safe version of do_index_project, making only one project indexing is happening at a time"""
         # lock the whole project so no one can change it while we operate
-        # aquire the lock *before* the try/finally, because it's already locked, we don't want to 
+        # aquire the lock *before* the try/finally, because it's already locked, we don't want to
         # release it by mistake
         self.lock_manager.lock(project_id,stage="indexing",info={"version": version, "revision": revision})
+        permissions = permissions if permissions else {}
         try:
             return self.do_index_project(project_id=project_id,version=version,
                                          revision=revision,permissions=permissions,
@@ -306,7 +282,6 @@ class BackendManagerBase:
         """
         Hook to enrich documents (in-place) with custom information
         """
-        pass
 
     def upload_jsondiff(self, jdiffs, project_id, version):
         """
@@ -330,15 +305,14 @@ class BackendManagerBase:
             # jdiff: full path for jsondiff file, including project_id, version, etc...
             # get rid of jsondiff folder path, we "reason" from the project/version folder
             jdiffpath = jdiff.replace(jsondiff_folder,"")  # relative path within project/version folder
-            jpath = re.sub("\.jsondiff$","",jdiffpath)  # may match _extra.metapath (same except .jsondiff extension)
+            jpath = re.sub(r"\.jsondiff$","",jdiffpath)  # may match _extra.metapath (same except .jsondiff extension)
             pat = re.escape(jpath)  # escaped string so we can regex search
-            for idx in range(len(docs)):
-                doc = docs[idx]
+            for idx,doc in enumerate(docs):
                 metapath = doc["_extra"]["metapath"]
                 # sometimes metapath includes starting slash
-                m = re.match("(\/?)({})$".format(pat),metapath)
-                if m:
-                    assert m.groups()[1] == jpath
+                res = re.match(r"(\/?)({})$".format(pat),metapath)
+                if res:
+                    assert res.groups()[1] == jpath
                     docs[idx] = self.patch_document(doc,jdiff)
                 else:
                     # jdiff path doesn't match current doc, patch isn't for that document
@@ -555,7 +529,7 @@ class BackendManagerBase:
             with open(dest_file,"w") as fout:
                 logging.info("Downloading %s", dest_file)
                 fout.write(content)
-    
+
     def available(self, project_id):
         """
         Check if any tasks are running for project_id. If so,
@@ -601,7 +575,7 @@ class BackendManagerBase:
         except HermesAPIError as e:
             if e.status_code == 400 and f"A log stream already exists for \'{gprn}\'" in e.message:
                 logging.info("There is already opened stream for gprn {}".format(gprn))
-                return 
+                return
             else:
                 raise e
 

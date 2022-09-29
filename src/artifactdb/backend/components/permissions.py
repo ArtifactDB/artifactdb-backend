@@ -1,7 +1,6 @@
 import logging
-import re
-from typing import Any, List, Union, Optional
-import json
+from typing import List, Union, Optional
+
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
 
@@ -48,41 +47,20 @@ class Permissions(BaseModel):
                 "write_access": "owners",
             }
         }
-    
+
     def to_dict(self):
         # mimick ElasticSearch DSL, this is kind of everywhere in the code
         perms = self.dict(exclude_none=True)
         return perms
 
 
-class PermissionValidator(object):
+class PermissionValidator:
+
     def is_valid(self, permission):
         raise NotImplementedError("Please implement 'is_valid' method.")
 
 
-class ADPermissionValidator(PermissionValidator): # cfg.auth.active_directory_groups
-    def __init__(self, ad_groups_settings):
-        self.ad_pattern = ad_groups_settings.ad_pattern
-        self.allowed_ad_pattern = ad_groups_settings.allowed_ad_pattern
-
-    def _get_ad_groups(self, groups):
-        r = re.compile(self.ad_pattern)
-        return list(filter(r.match, groups))
-
-    def _are_ad_groups_correct(self, ad_groups):
-        return all([not not re.search(self.allowed_ad_pattern, g) for g in ad_groups])
-
-    def _are_ad_groups_valid(self, groups):
-        ad_groups = self._get_ad_groups(groups)
-        return self._are_ad_groups_correct(ad_groups)
-
-    def is_valid(self, permission):
-        viewers = permission.get('viewers', [])
-        owners = permission.get('owners', [])
-        return self._are_ad_groups_valid(viewers) and self._are_ad_groups_valid(owners)
-
-
-class PermissionsBaseWrapper(object):
+class PermissionsBaseWrapper:
     """
     Wrapper over Permissions dealing with user input
     """
@@ -103,28 +81,29 @@ class PermissionsBaseWrapper(object):
             if field in permissions_dict:
                 normalized[field] = self.normalize(permissions_dict[field])
         permissions_dict.update(normalized)  # overwrite with normalized values
+        # pylint: disable=not-callable  # was asserted before
         self.permissions = self.__class__.permissions_model(**permissions_dict)
 
     def normalize(self, value):
         if isinstance(value,str):
-            value = [e for e in map(str.strip,value.split(","))]
+            value = list(map(str.strip, value.split(',')))
         assert isinstance(value,list), "Can't normalize value {}".format(repr(value))
         return value
 
     @classmethod
-    def propagate_default_permissions(klass, default_permissions):
+    def propagate_default_permissions(cls, default_permissions):
         """
         Dynamically set default permissions in model
         """
         for k,v in default_permissions.items():
-            assert k in klass.permissions_model.__fields__, "Default permissions contain invalid key '{}'".format(k)
-            klass.permissions_model.__fields__[k].default = v
+            assert k in cls.permissions_model.__fields__, "Default permissions contain invalid key '{}'".format(k)
+            cls.permissions_model.__fields__[k].default = v
         # also in __field__defaults__, though it doesn't have an impact in setting default values. just for consistency
-        klass.permissions_model.__field__defaults__ = default_permissions
+        cls.permissions_model.__field__defaults__ = default_permissions
 
     def __repr__(self):
         return "<{}.{}: {}>".format(self.__module__,self.__class__.__name__,self.to_dict())
-    
+
     def project_specific(self):
         """
         Return true if permissions are project-specific
@@ -142,14 +121,14 @@ class PermissionsBaseWrapper(object):
 
 
 class StandardPermissionsWrapper(PermissionsBaseWrapper):
-    
+
     permissions_model = Permissions
 
 
-class PermissionManagerBase(object):
-    
+class PermissionManagerBase:
+
     def __init__(self, storage_provider, es_manager, permissions_wrapper=StandardPermissionsWrapper,
-                 default_permissions=None, validators=[]):
+                 default_permissions=None, validators=()):
         self.storage_provider = storage_provider
         self.es = es_manager
         self.permissions_wrapper = permissions_wrapper
@@ -170,7 +149,7 @@ class PermissionManagerBase(object):
 class InheritedPermissionManager(PermissionManagerBase):
     """
     "permissions" can be passed to set authorizations, for a given project or project/version,
-    
+
     If default is kept, permissions are inherited.
     1) from the version (if previously set there, in case of re-indexing of an existing version), or
     2) from the project itself.
@@ -205,9 +184,9 @@ class InheritedPermissionManager(PermissionManagerBase):
             manager.storage_manager.get_storage,
             manager.es,
             default_permissions=cfg.permissions.default_permissions,
-        )            
+        )
 
-    def register_permissions(self, project_id, version=None, permissions={}):
+    def register_permissions(self, project_id, version=None, permissions=None):
         """
         Register permissions for given project. 'permissions' can include 'scope'
         information to decide whether permissions should be applied at project or
@@ -226,6 +205,7 @@ class InheritedPermissionManager(PermissionManagerBase):
         """
         # version is optional, but not permissions, but I wanna keep the same signature
         assert permissions, "Specify permissions to register"
+        assert isinstance(permissions,dict), "Expected dict for passed permissions"
         # check if existing permissions, if so, merge passed ones on top of existing
         existing = {}
         try:
@@ -302,7 +282,7 @@ class InheritedPermissionManager(PermissionManagerBase):
 
     def delete_permissions(self, project_id=None, version=None):
         return self.s3.delete_permissions(project_id,version)
-        
+
     def complete_permissions(self, project_id, version, pobj):
         try:
             existing = self.resolve_permissions(project_id,version)
@@ -310,7 +290,7 @@ class InheritedPermissionManager(PermissionManagerBase):
             # and not the ones coming from default perms propagation (see GDB-301)
             for field in pobj.__fields_set__:
                 # GDB-337: None values get dropped by the pydantic models resulting in not stored None values
-                # (and original value is kept intact), so we make sure to convert to 
+                # (and original value is kept intact), so we make sure to convert to
                 # an empty list (which is a valid value too)
                 if field in ("owners","viewers") and getattr(pobj,field) is None:
                     setattr(pobj,field,[])
@@ -323,5 +303,5 @@ class InheritedPermissionManager(PermissionManagerBase):
         for validator in self.validators:
             if not validator.is_valid(permission):
                 return False
-        
+
         return True
