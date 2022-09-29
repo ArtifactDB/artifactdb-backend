@@ -12,10 +12,6 @@ import backoff
 import elasticsearch.helpers.errors
 
 from gpapy.backend.revision import RevisionManager, NumericalRevisionProvider
-from gpapy.db.elastic.manager import ElasticManager, NotFoundError
-from gpapy.db.elastic.client import AliasNotFound
-from gpapy.db.elastic.alias import update_es_aliases, CREATE_ALIAS, REMOVE_ALIAS, OUT_OF_SYNC, \
-                                   MISSING, SYNCED
 from gpapy.db.elastic import TransportError
 from gpapy.db.schema import SchemaClient, SchemaClientManager, NoSchemaError, ValidationError
 from gpapy.rest.auth import god
@@ -46,11 +42,10 @@ class BackendManagerBase:
     def __init__(self, cfg, celery_app=None):
         self.cfg = cfg
         self.celery_app = celery_app
-        self.prepare_es_manager()
+        ####self.prepare_es_manager()
         ####self.prepare_storage_manager()
         self.prepare_schema_manager()
         self.prepare_lock_manager()
-        self.prepare_revision_manager()
         ####self.prepare_permissions_manager()
         ####self.prepare_sequence_manager()
         self.prepare_s3_inventory_manager()
@@ -63,6 +58,7 @@ class BackendManagerBase:
         self.prepare_atlas_helper()
 
         self.register_components()
+        self.prepare_revision_manager()
 
     def build(self, component_class, required=None):
         if hasattr(self,component_class.NAME):
@@ -101,87 +97,6 @@ class BackendManagerBase:
         """
         return self.storage_manager.get_storage()
 
-    def prepare_es_manager(self):
-        self.es = ElasticManager(self.cfg.es,"backend",self.cfg.es.scroll,
-                                 self.cfg.es.switch,self.cfg.gprn,self.cfg.schema)
-        logging.info("Using Elasticsearch config: {}".format(self.cfg.es.backend))
-        self.prepare_es_aliases()
-
-    def prepare_es_aliases(self):
-        # check frontend clients as well, whether aliases are needed
-        # First, make sure aliases exists. Frontend ES manager can know that on its own.
-        def front_es():
-            self.front_es = ElasticManager(self.cfg.es,"frontend",self.cfg.es.scroll,
-                                           self.cfg.es.switch,self.cfg.gprn,self.cfg.schema)
-        try:
-            front_es()
-        except AliasNotFound as e:
-            logging.warning(f"Missing Elasticsearch alias: {e}")
-            if self.cfg.es.auto_create_aliases:
-                self.update_es_aliases(ask=False,ops=["create"])
-            front_es()
-        # Second, we need to check if the aliases are in-sync, pointing to the right index defined in section backend
-        report = self.es_aliases(status=OUT_OF_SYNC)
-        if report:
-            logging.warning(f"Out-of-sync Elasticsearch alias: {report}")
-            if self.cfg.es.auto_sync_aliases:
-                self.update_es_aliases(ask=False,ops=["move"])
-
-    def es_aliases(self, status=None):
-        """
-        Return aliases (per clients) as currently active in Elasticsearch.
-        `status` can be used to specifically request client with given status.
-        """
-        per_clients = {}
-        for name,cfg in self.cfg.es.frontend.clients.items():
-            if cfg.get("alias"):
-                idx = self.cfg.es.backend.clients[name]["index"]
-                per_clients[name] = {
-                    "alias": None,
-                    "index": idx,  # what's defined in config
-                    "target": None,  # what's actually pointing to
-                    "status": None,
-                }
-                alias = cfg["alias"]
-                per_clients[name]["alias"] = alias
-                try:
-                    info = self.es.es_client.client.indices.get_alias(name=alias)
-                except NotFoundError:
-                    per_clients[name]["status"] = MISSING
-                    continue
-                targets = list(info)
-                assert len(targets) == 1
-                target = targets.pop()
-                per_clients[name]["target"] = target
-                if idx != target:
-                    logging.warning(f"Alias '{alias}' points to '{target}' instead of '{idx}'")
-                    per_clients[name]["status"] = OUT_OF_SYNC
-                else:
-                    per_clients[name]["status"] = SYNCED
-
-        if status:
-            # should we keep according to requested status?
-            for name in list(per_clients):
-                if status != per_clients[name]["status"]:
-                    per_clients.pop(name)
-
-        return per_clients
-
-    def es_aliases_synced(self):
-        """
-        Return whether frontend aliases are in sync with backend indices.
-        - True: aliases are in sync
-        - False: aliases not in sync
-        - None: there's no aliases
-        If missing alias, raises AliasNotFound()
-        """
-        report = self.es_aliases()
-        for info in report.values():
-            if info["status"] != SYNCED:
-                return False
-        # empty report means there's no aliases found
-        return report and True or None
-
     def prepare_schema_manager(self):
         self.schema_manager = SchemaClientManager(self.cfg.schema)
 
@@ -217,25 +132,6 @@ class BackendManagerBase:
             self.atlas = get_atlas_helper(self.cfg.atlas)
         else:
             self.atlas = get_atlas_helper()
-
-    def update_es_aliases(self, clients=None, ops=["create","move"],ask=True):
-        if clients:
-            if isinstance(clients,str):  # it's a single client alias
-                clients = {clients:self.es.clients[clients]}
-            else:
-                assert isinstance(clients,dict), "Expected client alias or dict of clients"
-        else:
-            clients = self.es.clients
-
-        allowed_ops = set()
-        if "create" in ops:
-            allowed_ops.add(CREATE_ALIAS)
-        if "move" in ops:
-            # move means remove+create (it's done as an atomic operation)
-            allowed_ops.add(CREATE_ALIAS)
-            allowed_ops.add(REMOVE_ALIAS)
-
-        return update_es_aliases(clients,self.cfg,ops=list(allowed_ops),ask=ask)
 
     def delete_partially_indexed(self, project_id, version):
         """
