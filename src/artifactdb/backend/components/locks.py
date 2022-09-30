@@ -4,7 +4,7 @@ import datetime
 
 import redis
 
-from artifactdb.backend.components import BackendComponent
+from artifactdb.backend.components import WrappedBackendComponent
 from artifactdb.utils.context import auth_user_context
 
 
@@ -29,25 +29,17 @@ class BackendUnavailableError(Exception):
 
 
 
-class LockManager(BackendComponent):
+class LockManager(WrappedBackendComponent):
 
     NAME = "lock_manager"
     FEATURES = ["lock",]
     DEPENDS_ON = []
 
-    def __init__(self, manager, cfg):
-        self.cfg = cfg.lock
-        self.locker = None
-        if self.cfg.backend.type == "redis":
-            self.locker = RedisLockManager(self.cfg)
+    def wrapped(self):
+        if self.main_cfg.lock.backend.type == "redis":
+            return RedisLockManager(self.main_cfg.lock)
         else:
-            raise NotImplementedError("Lock backend type '{}' not supported".format(cfg.backend.type))
-
-    def __getattr__(self, name):
-        if name == "locker":
-            return self.locker
-        else:
-            return getattr(self.locker,name)
+            raise NotImplementedError(f"Lock backend type '{self.cfg.backend.type}' not supported")
 
 
 class LockManagerBase:

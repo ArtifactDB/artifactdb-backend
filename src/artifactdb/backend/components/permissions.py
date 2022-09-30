@@ -4,6 +4,8 @@ from typing import List, Union, Optional
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
 
+from artifactdb.backend.components import WrappedBackendComponent
+
 
 class PermissionsError(Exception):
     pass
@@ -175,17 +177,6 @@ class InheritedPermissionManager(PermissionManagerBase):
     }
     """
 
-    NAME = "permissions_manager"
-    FEATURES = ["permissions",]
-    DEPENDS_ON = ["storage_manager",]
-
-    def __init__(self, manager, cfg):
-        PermissionManagerBase.__init__(self,
-            manager.storage_manager.get_storage,
-            manager.es,
-            default_permissions=cfg.permissions.default_permissions,
-        )
-
     def register_permissions(self, project_id, version=None, permissions=None):
         """
         Register permissions for given project. 'permissions' can include 'scope'
@@ -305,3 +296,45 @@ class InheritedPermissionManager(PermissionManagerBase):
                 return False
 
         return True
+
+
+class PermissionManagerComponent(WrappedBackendComponent):
+    """
+    "permissions" can be passed to set authorizations, for a given project or project/version,
+
+    If default is kept, permissions are inherited.
+    1) from the version (if previously set there, in case of re-indexing of an existing version), or
+    2) from the project itself.
+
+    Example 1: a new version of projec is indexed, permissions are not specified, they will be inherited
+        by default from the permission set at project level (defined in the "internal metadata" folder on S3).
+        If no such permissions exist at project level, an error is raised.
+    Example 2: an existing version is reindexed, permissions are not specified. Permissions are first taken
+        from a permission set at version level, and if non-existent, then taken from permissions are project
+        level.
+    Example 3: a new version is indexed, permission are specified with "scope=version". This means permissions
+        are valid only for this version. If a subsequent project-level permissions are specified in another
+        indexing job, these version-specific permissions are kept, unless force=True, which in this case
+        will delete any version-specific permissions so they're replaced by the project-level one.
+
+    Note: there's currently no support for file-specific permissions.
+
+    Ex:
+    permissions = {
+        "owners" : ["user1","user2"],
+        "viewers": ["another1"],
+        "scope": "project|version"
+    }
+    """
+
+    NAME = "permissions_manager"
+    FEATURES = ["permissions",]
+    DEPENDS_ON = ["storage_manager",]
+
+    def wrapped(self):
+        return PermissionManagerBase(
+            self.manager.storage_manager.get_storage,
+            self.manager.es,
+            default_permissions=self.main_cfg.permissions.default_permissions,
+        )
+

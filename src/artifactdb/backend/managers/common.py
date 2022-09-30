@@ -6,9 +6,9 @@ from artifactdb.backend.managers.base import BackendManagerBase
 from artifactdb.backend.components.plugins import PluginsManager
 from artifactdb.backend.components.sequences import SequenceManager
 from artifactdb.backend.components.storages import StorageManager
-from artifactdb.backend.components.indexers import BackendElasticManager
-from artifactdb.backend.components.permissions import InheritedPermissionManager, NoPermissionFoundError
-from artifactdb.backend.components.revisions import RevisionManager
+from artifactdb.backend.components.indexers import ElasticManager
+from artifactdb.backend.components.permissions import PermissionManagerComponent, NoPermissionFoundError
+from artifactdb.backend.components.revisions import RevisionManagerComponent
 from artifactdb.backend.components.schemas import SchemaManager
 from artifactdb.backend.components.locks import LockManager
 from artifactdb.backend.components.inventories import S3InventoryManager
@@ -20,9 +20,9 @@ class ArtifactDBBackendManagerBase(BackendManagerBase):
     COMPONENTS = [
         # must always be there for an ArtifactDB API
         {"class": StorageManager, "required": True},
-        {"class": BackendElasticManager, "required": True},
-        {"class": InheritedPermissionManager, "required": True},
-        {"class": RevisionManager, "required": True},
+        {"class": ElasticManager, "required": True},
+        {"class": PermissionManagerComponent, "required": True},
+        {"class": RevisionManagerComponent, "required": True},
         {"class": SchemaManager, "required": True},
         {"class": LockManager, "required": True},
         {"class": QueuesManager, "required": True},

@@ -36,7 +36,6 @@ class StorageManager(BackendComponent):
         self.default_client = None
         self.active_client = None
         self._context = None
-        self.init()
 
     def create_s3_storage(self, cfg):
         return S3Client(cfg.s3)

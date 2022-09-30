@@ -14,14 +14,11 @@ import elasticsearch.helpers.errors
 from gpapy.db.elastic import TransportError
 from gpapy.db.schema import NoSchemaError
 from gpapy.rest.auth import god
-from gpapy.helpers.almighty import AlmightyHelper
 
 
-from gpapy.helpers.hermes import HermesAPIError, HermesHelper
-from gpapy.helpers.atlas import get_atlas_helper
-from gpapy.helpers.keycloak import KeycloakHelper
+from gpapy.helpers.hermes import HermesAPIError
 
-from artifactdb.backend.components import InvalidComponentError
+from artifactdb.backend.components import InvalidComponentError, ComponentNotFoundError
 from artifactdb.backend.utils import generate_jsondiff_folder_key
 from artifactdb.backend.managers import BulkIndexException
 from artifactdb.utils.context import auth_user_context
@@ -37,29 +34,14 @@ class BackendManagerBase:
     def __init__(self, cfg, celery_app=None):
         self.cfg = cfg
         self.celery_app = celery_app
-        ####self.prepare_es_manager()
-        ####self.prepare_revision_manager()
-        ####self.prepare_storage_manager()
-        ####self.prepare_schema_manager()
-        ####self.prepare_lock_manager()
-        ####self.prepare_permissions_manager()
-        ####self.prepare_sequence_manager()
-        ####self.prepare_s3_inventory_manager()
-        ####self.prepare_plugins_manager()
-        ####self.prepare_queues_manager()
-        # 3rd party integration
-        self.prepare_keycloak_helper()
-        self.prepare_almighty_helper()
-        self.prepare_hermes_helper()
-        self.prepare_atlas_helper()
-
         self.register_components()
 
     def build(self, component_class, required=None):
         if hasattr(self,component_class.NAME):
-            raise InvalidComponentError("Backend component {component_class.NAME!r} already added")
+            raise InvalidComponentError(f"Backend component {component_class.NAME!r} already added")
         try:
             component_inst = component_class(self,self.cfg)
+            component_inst.init()
             # register the instance as the component's name
             logging.info(f"Adding backend component {component_class.NAME!r}")
             setattr(self,component_class.NAME,component_inst)
@@ -84,6 +66,15 @@ class BackendManagerBase:
                 required=component["required"]
             )
 
+    @classmethod
+    def replace_component(cls, component_name, **component_kwargs):
+        found = [(i,_) for (i,_) in enumerate(cls.COMPONENTS) if _["class"].NAME == component_name]
+        if not found:
+            raise ComponentNotFoundError(component_name)
+        assert len(found) == 1
+        idx = found[0][0]
+        cls.COMPONENTS[idx] = component_kwargs
+
     @property
     def s3(self):
         """
@@ -91,23 +82,6 @@ class BackendManagerBase:
         defined.
         """
         return self.storage_manager.get_storage()
-
-    def prepare_keycloak_helper(self):
-        self.keycloak = None
-        if self.cfg.auth.service_account:
-            self.keycloak = KeycloakHelper(self.cfg.auth.service_account)
-
-    def prepare_almighty_helper(self):
-        self.almighty = AlmightyHelper(self.cfg.almighty.url)
-
-    def prepare_hermes_helper(self):
-        self.hermes = HermesHelper(self.cfg.hermes)
-
-    def prepare_atlas_helper(self):
-        if hasattr(self.cfg, "atlas"):
-            self.atlas = get_atlas_helper(self.cfg.atlas)
-        else:
-            self.atlas = get_atlas_helper()
 
     def delete_partially_indexed(self, project_id, version):
         """

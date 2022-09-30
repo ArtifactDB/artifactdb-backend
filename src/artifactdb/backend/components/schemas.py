@@ -1,14 +1,13 @@
 from gpapy.db.schema import SchemaClientManager
-from artifactdb.backend.components import BackendComponent
+from artifactdb.backend.components import WrappedBackendComponent
 
 
-class SchemaManager(BackendComponent, SchemaClientManager):
+class SchemaManager(WrappedBackendComponent):
 
     NAME = "schema_manager"
     FEATURES = ["schemas","validation"]
     DEPENDS_ON = []
 
-    def __init__(self, manager, cfg):
-        self.main_cfg = cfg
-        SchemaClientManager.__init__(self,self.main_cfg.schema)
+    def wrapped(self):
+        return SchemaClientManager(self.main_cfg.schema)
 

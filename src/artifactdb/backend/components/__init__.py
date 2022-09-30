@@ -2,8 +2,8 @@
 from abc import ABC, ABCMeta, abstractmethod, abstractproperty
 
 
-class InvalidComponentError(Exception):
-    pass
+class InvalidComponentError(Exception): pass
+class ComponentNotFoundError(Exception): pass
 
 class BackendComponent(metaclass=ABCMeta):
     """
@@ -18,6 +18,11 @@ class BackendComponent(metaclass=ABCMeta):
         If the sub-component creation is not possible (eg. missing or invalid configuration)
         an `InvalidComponentError` exception must be raised. It's up to the caller (backend manager
         being built) to decide whether the failure can be ignored (optional component) or not.
+        """
+
+    def init(self):
+        """
+        Optional init step called once the component instance was created
         """
 
     @property
@@ -46,4 +51,29 @@ class BackendComponent(metaclass=ABCMeta):
 
 
 
+class WrappedBackendComponent(BackendComponent):
+    """
+    Add wrapper function to transparently convert an external object
+    into a backend component.
+    The wrapped instance must be stored in self.wrapped, in init()
+    """
+
+    def __init__(self, manager, cfg):
+        self.manager = manager
+        self.main_cfg = cfg  # the whole config
+        self.cfg = None  # placholder for the component config section
+        self._wrapped = self.wrapped()
+        assert not self._wrapped is None, "wrapped() must return the wrapped instance, got None"
+
+    @abstractmethod
+    def wrapped(self):
+        """
+        Return the instance the backend component should wrap.
+        """
+
+    def __getattr__(self, name):
+        if name == "_wrapped":
+            return self._wrapped
+        else:
+            return getattr(self._wrapped,name)
 

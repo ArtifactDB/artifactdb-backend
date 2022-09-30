@@ -1,32 +1,38 @@
+# pylint: disable=attribute-defined-outside-init
+# init() plays the role of __init__() in backend component
 import logging
 
-from gpapy.db.elastic.manager import ElasticManager, NotFoundError
+from gpapy.db.elastic.manager import ElasticManager as ElasticManagerWrapped, NotFoundError
 from gpapy.db.elastic.client import AliasNotFound
 from gpapy.db.elastic.alias import update_es_aliases, CREATE_ALIAS, REMOVE_ALIAS, OUT_OF_SYNC, \
                                    MISSING, SYNCED
 
-from artifactdb.backend.components import BackendComponent
+from artifactdb.backend.components import WrappedBackendComponent
 
 
-class BackendElasticManager(BackendComponent, ElasticManager):
+class ElasticManager(WrappedBackendComponent):
 
     NAME = "es"
     FEATURES = ["indexing",]
     DEPENDS_ON = ["revision_manager",]
 
-    def __init__(self, manager, cfg):
-        self.main_cfg = cfg
+    def init(self):
         self.front_es = None
-        ElasticManager.__init__(self,self.main_cfg.es,"backend",self.main_cfg.es.scroll,
-                                self.main_cfg.es.switch,self.main_cfg.gprn,self.main_cfg.schema)
         logging.info("Using Elasticsearch config: {}".format(self.main_cfg.es.backend))
         self.prepare_es_aliases()
+
+    def wrapped(self):
+        return ElasticManagerWrapped(
+            self.main_cfg.es,"backend",self.main_cfg.es.scroll,
+            self.main_cfg.es.switch,self.main_cfg.gprn,
+            self.main_cfg.schema
+        )
 
     def prepare_es_aliases(self):
         # check frontend clients as well, whether aliases are needed
         # First, make sure aliases exists. Frontend ES manager can know that on its own.
         def front_es():
-            self.front_es = ElasticManager(self.main_cfg.es,"frontend",self.main_cfg.es.scroll,
+            self.front_es = ElasticManagerWrapped(self.main_cfg.es,"frontend",self.main_cfg.es.scroll,
                                            self.main_cfg.es.switch,self.main_cfg.gprn,self.main_cfg.schema)
         try:
             front_es()

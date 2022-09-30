@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from artifactdb.backend.components import BackendComponent
+from artifactdb.backend.components import WrappedBackendComponent
 
 
 class RevisionError(Exception): pass
@@ -84,7 +84,7 @@ class SimpleRevisionProvider(NumericalRevisionProvider):
         return RevisionBase(revision)
 
 
-class RevisionManagerBase:
+class RevisionManager:
 
     provider = None
 
@@ -99,20 +99,12 @@ class RevisionManagerBase:
             return getattr(self.provider, name)
 
 
-class RevisionManager(BackendComponent, RevisionManagerBase):
+class RevisionManagerComponent(WrappedBackendComponent):
 
     NAME = "revision_manager"
     FEATURES = ["revisions",]
     DEPENDS_ON = ["es",]
 
-    def __init__(self, manager, cfg, provider_klass=None):
-        provider_klass = provider_klass if provider_klass else NumericalRevisionProvider
-        RevisionManagerBase.__init__(self,provider_klass,manager.es)
-
-    def __getattr__(self, name):
-        if name == "provider":
-            return self.provider
-        else:
-            return getattr(self.provider, name)
-
+    def wrapped(self):
+        return RevisionManager(NumericalRevisionProvider,self.manager.es)
 
