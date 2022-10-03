@@ -11,13 +11,11 @@ import dateparser
 import backoff
 import elasticsearch.helpers.errors
 
-from gpapy.db.elastic import TransportError
-from gpapy.db.schema import NoSchemaError
-from gpapy.rest.auth import god
-
-
 from gpapy.helpers.hermes import HermesAPIError
 
+from artifactdb.db.elastic import TransportError
+from artifactdb.db.schema import NoSchemaError
+from artifactdb.rest.auth import god
 from artifactdb.backend.components import InvalidComponentError, ComponentNotFoundError
 from artifactdb.backend.utils import generate_jsondiff_folder_key
 from artifactdb.backend.managers import BulkIndexException
@@ -533,7 +531,7 @@ class BackendManagerBase:
 
     @backoff.on_exception(backoff.expo, Exception, max_tries=3)
     async def open_log(self, gprn, project_id, version=None, subject="", close_when=None, attrs_when_closed=None, use_schema=True):
-        # it's here to avoid code duplication - this function can be used by open_log task and gpapy/rest/helpers.py::open_log_request
+        # it's here to avoid code duplication - this function can be used by open_log task and artifactdb/rest/helpers.py::open_log_request
         msg = f"{gprn} (close_when={close_when},attrs_when_closed={attrs_when_closed}"
         try:
             alm = await self.get_publisher_token()

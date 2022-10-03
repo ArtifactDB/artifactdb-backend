@@ -14,6 +14,7 @@ class SchemaClientConfig(PrintableYamlConfig):
     }
 
     types = None
+    client = None
     extra = {}
 
     def init_from(self, conf):

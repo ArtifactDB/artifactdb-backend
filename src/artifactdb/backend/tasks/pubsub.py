@@ -1,7 +1,6 @@
 import logging
 
-from gpapy.backend.lock import RE_INDEXING
-
+from artifactdb.backend.components.locks import RE_INDEXING
 from artifactdb.backend.tasks import task_params
 from artifactdb.backend.managers import RETRYABLE_EXCEPTIONS
 from artifactdb.utils.stages import INDEXED, FAILED

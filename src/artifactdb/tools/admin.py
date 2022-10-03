@@ -13,10 +13,8 @@ import requests
 import elasticsearch.helpers
 from elasticsearch import Elasticsearch
 
-# TODO; wip refactoring
-from gpapy.rest.auth import god, guest
-from gpapy.db.elastic.alias import update_es_aliases, move_es_alias
-
+from artifactdb.rest.auth import god, guest
+from artifactdb.db.elastic.alias import update_es_aliases, move_es_alias
 from artifactdb.utils.context import auth_user_context
 from artifactdb.utils.misc import process_coroutine
 from artifactdb.config.elasticsearch import ElasticsearchConfig

@@ -2,12 +2,11 @@
 # init() plays the role of __init__() in backend component
 import logging
 
-from gpapy.db.elastic.manager import ElasticManager as ElasticManagerWrapped, NotFoundError
-from gpapy.db.elastic.client import AliasNotFound
-from gpapy.db.elastic.alias import update_es_aliases, CREATE_ALIAS, REMOVE_ALIAS, OUT_OF_SYNC, \
-                                   MISSING, SYNCED
-
 from artifactdb.backend.components import WrappedBackendComponent
+from artifactdb.db.elastic.manager import ElasticManager as ElasticManagerWrapped, NotFoundError
+from artifactdb.db.elastic.client import AliasNotFound
+from artifactdb.db.elastic.alias import update_es_aliases, CREATE_ALIAS, REMOVE_ALIAS, OUT_OF_SYNC, \
+                                   MISSING, SYNCED
 
 
 class ElasticManager(WrappedBackendComponent):

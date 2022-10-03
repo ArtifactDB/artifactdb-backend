@@ -1,4 +1,4 @@
-from gpapy.db.schema import SchemaClientManager
+from artifactdb.db.schema import SchemaClientManager
 from artifactdb.backend.components import WrappedBackendComponent
 
 
@@ -10,4 +10,7 @@ class SchemaManager(WrappedBackendComponent):
 
     def wrapped(self):
         return SchemaClientManager(self.main_cfg.schema)
+
+    def __getitem__(self, schema_alias):
+        return self._wrapped[schema_alias]
 

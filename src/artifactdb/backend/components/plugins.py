@@ -7,14 +7,13 @@ from datetime import datetime
 
 import yaml
 
-from gpapy.backend.tasks import task_params
-from gpapy.backend.tasks import ask_for_restart
-from gpapy.backend.scheduler import schedule_tasks_from_config
-from gpapy.backend.manager_exceptions import RETRYABLE_EXCEPTIONS
-from gpapy.db.schema import get_cache
-from gpapy.backend.queues import DEFAULT_TASK_PRIORITY
-
+from artifactdb.backend.tasks import task_params
+from artifactdb.backend.tasks.core import ask_for_restart
+from artifactdb.backend.scheduler import schedule_tasks_from_config
+from artifactdb.backend.managers import RETRYABLE_EXCEPTIONS
+from artifactdb.db.schema import get_cache
 from artifactdb.backend.components import BackendComponent, InvalidComponentError
+from artifactdb.backend.components.queues import DEFAULT_TASK_PRIORITY
 from artifactdb.identifiers.gprn import generate
 from artifactdb.utils.misc import add_sys_path
 from artifactdb.backend.git import GitManager
