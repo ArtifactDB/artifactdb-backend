@@ -5,6 +5,18 @@ from abc import ABC, ABCMeta, abstractmethod, abstractproperty
 class InvalidComponentError(Exception): pass
 class ComponentNotFoundError(Exception): pass
 
+
+BACKEND_METHOD_TAG = "_backend_method"
+def managermethod(method, name=None):
+    """
+    Decorator used by backend components to register method in the manager
+    by binding and patching the manager instance, making the `method`
+    *as if* the method was part of the manager.
+    """
+    setattr(method,BACKEND_METHOD_TAG,method.__name__ if name is None else name)
+    return method
+
+
 class BackendComponent(metaclass=ABCMeta):
     """
     Base class for backend sub-component
@@ -20,7 +32,7 @@ class BackendComponent(metaclass=ABCMeta):
         being built) to decide whether the failure can be ignored (optional component) or not.
         """
 
-    def init(self):
+    def component_init(self):
         """
         Optional init step called once the component instance was created
         """

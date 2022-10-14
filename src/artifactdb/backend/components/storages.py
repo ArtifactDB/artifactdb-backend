@@ -40,7 +40,7 @@ class StorageManager(BackendComponent):
     def create_s3_storage(self, cfg):
         return S3Client(cfg.s3)
 
-    def init(self):
+    def component_init(self):
         for i,cfg in enumerate(self.cfg.clients):
             creator = getattr(self,f"create_{cfg.type}_storage")
             assert not cfg.alias in self.clients, f"Storage with alias {cfg.alias} already registered"
@@ -675,3 +675,9 @@ class S3Client:
             raise S3ObjectNotFound(f"Key: '{key}' not found in s3 bucket: '{self.bucket_name}'.")
         except self.client.exceptions.NoSuchBucket:
             raise S3ObjectNotFound(f"Bucket: '{self.bucket_name}' not found.")
+
+
+#########################
+# Backend method mixins #
+#########################
+

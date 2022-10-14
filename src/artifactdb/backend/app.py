@@ -2,7 +2,8 @@ import logging
 
 from celery import Celery
 
-from artifactdb.utils.context import auth_user_context, backend_user
+from artifactdb.utils.context import auth_user_context
+from artifactdb.rest.auth import backend_user
 from artifactdb.backend.scheduler import prepare_task_routes, schedule_tasks_from_config, register_tasks_from_config
 from .tasks.pubsub import publish_all_indexed_failed, publish_all_indexed
 from .tasks.core import index, index_all, purge_not_completed, cancel_task, \

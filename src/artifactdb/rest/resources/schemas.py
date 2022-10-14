@@ -32,7 +32,7 @@ class Documents(BaseModel):
         }
 
     @validator('docs', each_item=True)
-    def check_document_not_empty(self, doc):
+    def check_document_not_empty(cls, doc):
         if not doc:
             raise ValueError("Empty document are not allowed")
         return doc

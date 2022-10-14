@@ -41,6 +41,12 @@ class LockManager(WrappedBackendComponent):
         else:
             raise NotImplementedError(f"Lock backend type '{self.cfg.backend.type}' not supported")
 
+    def __enter__(self):
+        self._wrapped.__enter__()
+
+    def __exit__(self, *args, **kwargs):
+        self._wrapped.__exit__(*args,**kwargs)
+
 
 class LockManagerBase:
     """
