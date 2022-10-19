@@ -11,7 +11,7 @@ class PluginsResource(ResourceBase):
                     description="Returns information about registered plugins for this API",
                     tags=["plugins"])
         def plugins(
-            plugins = Depends(cls.deps.get_plugins_manager),
+            plugins = Depends(cls.deps.get_plugins),
             _: str = Depends(cls.deps.get_authorizer(roles=["admin"], access_rules=[]))
         ):
             if plugins:
