@@ -31,7 +31,10 @@ class DependencyManagerBase:
 
         @property
         def es_client(self):
-            return self.manager.es
+            # ES manager for frontend/API needs to be the one containing frontend clients definition
+            # to use ES aliases when set
+            assert self.manager.front_es, "Backend manager has not frontend ES manager set"
+            return self.manager.front_es
 
         def prepare_presign_manager(self):
             self.presign_manager = None

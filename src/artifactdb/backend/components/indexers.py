@@ -7,31 +7,30 @@ import elasticsearch.helpers.errors
 from artifactdb.rest.auth import god
 from artifactdb.utils.context import auth_user_context
 from artifactdb.backend.components import WrappedBackendComponent, managermethod
-from artifactdb.db.elastic.manager import ElasticManager as ElasticManagerWrapped, NotFoundError
+from artifactdb.db.elastic.manager import ElasticManager, NotFoundError
 from artifactdb.db.elastic.client import AliasNotFound
 from artifactdb.db.elastic.alias import update_es_aliases as update_es_aliases_helper, CREATE_ALIAS, \
                                         REMOVE_ALIAS, OUT_OF_SYNC, MISSING, SYNCED
 
 
-class ElasticManager(WrappedBackendComponent):
+class ElasticManagerComponent(WrappedBackendComponent):
 
     NAME = "es"
     FEATURES = ["indexing",]
     DEPENDS_ON = ["revision_manager",]
 
     def component_init(self):
-        self.front_es = None
+        self.manager.front_es = None
         self.cfg = self.main_cfg.es.backend
         logging.info("Using Elasticsearch config: {}".format(self.cfg))
         self.manager.prepare_es_aliases()  # patched to manager with @backendmethod
 
     def wrapped(self):
-        return ElasticManagerWrapped(
+        return ElasticManager(
             self.main_cfg.es,"backend",self.main_cfg.es.scroll,
             self.main_cfg.es.switch,self.main_cfg.gprn,
             self.main_cfg.schema
         )
-
 
 
 #########################
@@ -43,7 +42,9 @@ def prepare_es_aliases(self):
     # check frontend clients as well, whether aliases are needed
     # First, make sure aliases exists. Frontend ES manager can know that on its own.
     def front_es():
-        self.front_es = ElasticManagerWrapped(self.cfg.es,"frontend",self.cfg.es.scroll,
+        # we use the same class as the `es` one (the wrapped instance's class) in case the
+        # component was customized/overridden, so both backend `es` and `front_es` are of the same type
+        self.front_es = self.es._wrapped.__class__(self.cfg.es,"frontend",self.cfg.es.scroll,
                                        self.cfg.es.switch,self.cfg.gprn,self.cfg.schema)
     try:
         front_es()
