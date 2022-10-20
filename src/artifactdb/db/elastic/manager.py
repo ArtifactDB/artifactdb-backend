@@ -2,6 +2,7 @@
 import os
 import logging
 import base64
+import copy
 from asyncio import sleep as aiosleep
 from functools import wraps, partial
 
@@ -153,8 +154,10 @@ class ElasticManager:
 
         # we need an elasticsearch client for multi index search, just get it from latest model version
         # (note we made sure before that all clients have the same URI so it doesn't matter which one
-        # we pick)
-        self.es_client = self.clients[self.latest_model_version]
+        # we pick). We copy to client to have a different ref: the clients in self.clients must not change,
+        # as they are used for indexing and routing. But switch() will modify self.es_client to match different sets of
+        # indices, which without a copy, would change self.clients[self.latest_model_version] by reference.
+        self.es_client = copy.copy(self.clients[self.latest_model_version])
         self.schema_map = {}  # cache: $schema value -> model version (eg. v1, v2)
         self.find_aliases()
 
@@ -201,7 +204,7 @@ class ElasticManager:
         if self._contexts:
             es_default_index_context.reset(self._contexts.pop("indices_ctx"))
             es_switch_context.reset(self._contexts.pop("switch_ctx"))
-            self.es_client = self.clients[self.latest_model_version]
+            self.es_client = copy.copy(self.clients[self.latest_model_version])
             assert not self._contexts  # nothing left we didn't think about
         # None means we reset context, so proceed further only if alias is set to something
         if not alias is None:

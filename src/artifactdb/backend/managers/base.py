@@ -47,6 +47,10 @@ class BackendManagerBase:
                 logging.debug(f"Patching manager instance with component {component_mod.__name__!r} method {something}")
                 # bind to manager instance
                 bound = something.__get__(self,self.__class__)  # pylint: disable=unnecessary-dunder-call
+                if hasattr(self,method_name):
+                    # avoid patching over an existing method, that could have been overriden in a manager subclass
+                    logging.info(f"Manager {self.__class__} already has a method named {method_name!r}, skipping patch")
+                    continue
                 setattr(self.__class__,method_name,bound)
 
     def register_components(self):

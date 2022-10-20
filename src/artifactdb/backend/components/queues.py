@@ -3,7 +3,7 @@ import logging
 from kombu.common import Broadcast
 from kombu import Exchange, Queue
 
-from artifactdb.backend.components import BackendComponent
+from artifactdb.backend.components import WrappedBackendComponent
 
 
 DEFAULT_TASK_PRIORITY = 2
@@ -14,16 +14,21 @@ class QueuesError(Exception):
     pass
 
 
-class QueuesManager(BackendComponent):
+class QueuesManagerComponent(WrappedBackendComponent):
 
     NAME = "queues"
     FEATURES = ["queues","priority-queues"]
     DEPENDS_ON = []
 
-    def __init__(self, manager, cfg):
-        self.main_cfg = cfg
-        self.cfg = self.main_cfg.celery
-        self.celery_app = manager.celery_app
+    def wrapped(self):
+        return QueuesManager(self.main_cfg.celery, self.manager.celery_app)
+
+
+class QueuesManager:
+
+    def __init__(self, cfg_celery, celery_app):
+        self.celery_app = celery_app
+        self.cfg = cfg_celery
         self.default_queue = None
         self.default_broadcast_queue = None
         self.queue_names = []
