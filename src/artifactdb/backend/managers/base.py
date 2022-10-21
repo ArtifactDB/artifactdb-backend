@@ -47,11 +47,14 @@ class BackendManagerBase:
                 logging.debug(f"Patching manager instance with component {component_mod.__name__!r} method {something}")
                 # bind to manager instance
                 bound = something.__get__(self,self.__class__)  # pylint: disable=unnecessary-dunder-call
-                # avoid patching over an existing method, that could have been overriden in a manager subclass as
-                # a "standard" method, not a decorated one. If it's a decorated one, we *must* patch it even if it's
-                # already patch, the reason is we patch the class, but `self` can be different instances, so we need to
-                # propagate the patch "for each self". For instance, if we need don't patch it again, eg.
-                # prepare_es_aliases() which is a @managermethod method:
+                # avoid patching over an existing method, that could have been overriden in a manager subclass as a
+                # "standard" method, not a decorated one. We still need to patch a class so in this case, the patch is
+                # applied to this BackendManagerBase class. This allows a subclass to call super().method() is
+                # necessary.
+                # If the method is a decorated one, we *must* patch it even if it's already patch, the reason is we
+                # patch the class, but `self` can be different instances, so we need to propagate the patch "for each
+                # self". For instance, if we need don't patch it again, eg.  prepare_es_aliases() which is a
+                # @managermethod method:
                 # > mgr1 = BackendManagerBase(...)
                 # => BackendManagerBase builds component `es` at some point, self refers to mgr1 and self.front_es to a
                 # specific object (self.prepare_es_aliases() creates that self.front_es instance, see code for that
@@ -60,11 +63,13 @@ class BackendManagerBase:
                 # => if we skip the patch (not what we're doing here, but to explain), self.front_es points to point
                 # mgr1.front_es, because prepare_es_aliases() was patched for mgr1.
                 # It's kind of weird and tricky, those patches are not super safe, so modify with caution.
+                # Note to myself: you built a monster, good job.
                 if hasattr(self,method_name) and not getattr(getattr(self,method_name),BACKEND_METHOD_TAG,None):
                     logging.info(f"Manager {self.__class__} already has a method named {method_name!r}, " + \
-                                 "not decorated with @managermethod, skipping patch")
-                    continue
-                setattr(self.__class__,method_name,bound)
+                                 "not decorated with @managermethod, patching base class BackendManagerBase instead")
+                    setattr(BackendManagerBase,method_name,bound)
+                else:
+                    setattr(self.__class__,method_name,bound)
 
     def register_components(self):
         """
