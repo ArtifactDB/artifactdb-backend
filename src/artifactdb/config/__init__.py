@@ -1,4 +1,5 @@
 import os
+import copy
 import logging
 import logging.config
 
@@ -11,7 +12,11 @@ from .cors import CorsConfig
 from .storages import set_storage_models, set_legacy_s3_config
 
 
-class ArtifactDBConfigBase(PrintableYamlConfig):
+#########################
+# Generic configuration #
+#########################
+
+class ConfigBase(PrintableYamlConfig):
     __handler__ = ApiConfigBaseHandler
 
     __mapping__ = {
@@ -40,12 +45,6 @@ class ArtifactDBConfigBase(PrintableYamlConfig):
     # human-readable name & description about the instance
     name = None
     description = None
-
-    # in order, as set_storage_models() will init actual config models instead of dict
-    __handler__.post_hooks = [
-        set_storage_models,
-        set_legacy_s3_config,
-    ]
 
     def __repr__(self):
         return "<{}: {}>".format(self.__class__.__name__, os.path.basename(self.config_file))
@@ -117,4 +116,20 @@ class ArtifactDBConfigBase(PrintableYamlConfig):
         logging.getLogger("tavern").setLevel(logging.ERROR)
         logging.getLogger("amqp").setLevel(logging.ERROR)
 
+
+#####################################
+# ArtifactDB-specific configuration #
+#####################################
+
+class ArtifactDBConfigBaseHandler(ApiConfigBaseHandler):
+    post_hooks = []
+
+
+class ArtifactDBConfigBase(ConfigBase):
+    __handler__ = ArtifactDBConfigBaseHandler
+    # in order, as set_storage_models() will init actual config models instead of dict
+    __handler__.post_hooks = [
+        set_storage_models,
+        set_legacy_s3_config,
+    ]
 

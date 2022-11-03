@@ -20,4 +20,8 @@ class CacheConfig(PrintableYamlConfig):
     cache_ttl = 12*60*60  # 12h
     backend = CacheBackend()
 
+    def __bool__(self):
+        # config component looks like dict, so map empty config data to empty dict to
+        # allow boolean checks on the component instancd
+        return self.to_dict() != {}
 

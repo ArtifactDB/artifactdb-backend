@@ -36,6 +36,9 @@ DEFAULT_CONNECTION_TIMEOUT = 2  # timeout before establishing connection (before
 
 class PermissionCheck(dict):
 
+    def __bool__(self):
+        return self["allowed"]
+
     def __or__(self, other):
         """
         Return allowing check or False if none of them is allowing
