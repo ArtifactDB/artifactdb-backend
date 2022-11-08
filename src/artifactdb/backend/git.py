@@ -47,7 +47,14 @@ class GitManager:
         }
 
     def _clone_repo(self, url, repo_dir, branch = None):
-        repo = Repo.clone_from(url, repo_dir, branch=branch)
+        try:
+            if branch:
+                repo = Repo.clone_from(url, repo_dir, branch=branch)
+            else:
+                repo = Repo.clone_from(url, repo_dir)
+        except Exception as e:
+            raise e
+
         return repo
 
     def is_any_repo_updated(self, fetch_tab):
@@ -66,6 +73,10 @@ class GitManager:
             return True
         else:
             raise GitManagerException(f"FetchInfo flag for repo pull: {flag}. Check: https://gitpython.readthedocs.io/en/stable/reference.html")
+
+    def get_repos(self, repos_cfg, pull=True):
+        for r_cfg in repos_cfg:
+            self.get_plugin_repo(r_cfg, pull)
 
     def get_plugin_repo(self, repo_cfg, pull):
         repo_dir = self._get_repo_path(repo_cfg)

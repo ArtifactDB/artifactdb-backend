@@ -11,10 +11,10 @@ class PluginsResource(ResourceBase):
                     description="Returns information about registered plugins for this API",
                     tags=["plugins"])
         def plugins(
-            plugins = Depends(cls.deps.get_plugins),
+            tasks=Depends(cls.deps.get_tasks),
             _: str = Depends(cls.deps.get_authorizer(roles=["admin"], access_rules=[]))
         ):
-            if plugins:
-                return plugins.get_tasks()
+            if tasks:
+                return tasks.get_registered_tasks()
             else:
                 raise APIErrorException(501, status="error", reason="Plugins not enabled.")

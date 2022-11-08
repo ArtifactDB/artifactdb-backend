@@ -23,6 +23,7 @@ from artifactdb.backend.components import schemas
 from artifactdb.backend.components import locks
 from artifactdb.backend.components import inventories
 from artifactdb.backend.components import queues
+from artifactdb.backend.components import tasks
 from artifactdb.backend.managers.base import BackendManagerBase
 from artifactdb.backend.managers import BulkIndexException
 
@@ -40,8 +41,9 @@ class ArtifactDBBackendManagerBase(BackendManagerBase):
         {"module": queues, "required": True},
         # Recommended but optionals
         {"module": sequences, "required": False},
-        {"module": plugins, "required": False},
         {"module": inventories, "required": False},
+        {"module": tasks, "required": False},
+        {"module": plugins, "required": False},
     ]
 
     @property

@@ -4,7 +4,6 @@ from celery import Celery
 
 from artifactdb.utils.context import auth_user_context
 from artifactdb.rest.auth import backend_user
-from artifactdb.backend.scheduler import prepare_task_routes, schedule_tasks_from_config, register_tasks_from_config
 from .tasks.pubsub import publish_all_indexed_failed, publish_all_indexed
 from .tasks.core import index, index_all, purge_not_completed, cancel_task, \
                         purge_expired,clean_stale_projects, \
@@ -74,26 +73,29 @@ def get_app(config_provider, manager_class, tasks=None):
     tasks = TASKS if tasks is None else tasks
     cfg = config_provider()
     app = BackendQueue(cfg, manager_class)
-    has_queues = hasattr(app.manager, "plugins")
+    has_queues = hasattr(app.manager, "queues")
+    has_plugins = hasattr(app.manager, "plugins")
+    has_tasks = hasattr(app.manager, "tasks")
+
     if has_queues:
         app.manager.queues.prepare_queues()
+
+    # get all plugin repository first
+    if has_plugins and app.manager.plugins:
+        repos_cfg = cfg.celery.get('repo')
+        app.manager.plugins.git_mgr.get_repos(repos_cfg, pull=True)
 
     for task in tasks:
         func,opts = task
         app.task(func, **opts)
 
     logging.info("Backend manager: {}".format(app.manager))
-    # Periodic task for Celery, Clean slate project task runs every define time in configuration if not No schedule task
-    tasks_def = cfg.celery.get("tasks", [])
-    if tasks_def:
-        app = register_tasks_from_config(app, tasks_def)
-        app.conf.beat_schedule = schedule_tasks_from_config(tasks_def, scheduler=app.conf.beat_schedule)
-        default_broadcast_queue = app.manager.queues.default_broadcast_queue
-        app.conf.task_routes = prepare_task_routes(tasks_def, default_broadcast_queue, task_routes=app.conf.task_routes)
 
-    has_plugins = hasattr(app.manager, "plugins")
     if has_plugins and app.manager.plugins:
         app.manager.plugins.register_repository_tasks_safe(pull=True)
-        app.manager.plugins.update_tasks()
+
+    if has_tasks:
+        app.manager.tasks.register_config_tasks()
+        app.manager.tasks.update_tasks_info()
 
     return app
