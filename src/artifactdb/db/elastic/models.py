@@ -182,7 +182,7 @@ class ArtifactDBDocumentMinimal(ArtifactDBDocumentBase):
     path = Keyword()
 
 
-class ArtifactDBDocumentDummy(ArtifactDBDocumentMinimal):
+class ArtifactDBDocumentDummy(ArtifactDBDocumentBase):
 
     class Meta:
         dynamic = MetaField('true')
