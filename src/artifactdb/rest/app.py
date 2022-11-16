@@ -16,7 +16,7 @@ from artifactdb.rest.middleware.es_switch import ESSwitchMiddleware
 from artifactdb.rest.middleware.storage_switch import StorageSwitchMiddleware
 # Usual resources
 from artifactdb.rest.resources import info
-from artifactdb.rest.resources import plugins
+from artifactdb.rest.resources import tasks
 from artifactdb.rest.resources import status
 from artifactdb.rest.resources import config
 from artifactdb.rest.resources import schemas
@@ -177,7 +177,7 @@ class ArtifactDBApi(BaseRESTAPI):
         "files": files.FilesResource,
         "permissions": permissions.PermissionsResource,
         "info": info.InfoResource,
-        "plugins": plugins.PluginsResource,
+        "tasks": tasks.TasksResource,
         "status": status.StatusResource,
         "index": index.IndexResource,
         "config": config.ConfigResource,

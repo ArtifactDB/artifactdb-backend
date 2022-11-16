@@ -47,13 +47,10 @@ class GitManager:
         }
 
     def _clone_repo(self, url, repo_dir, branch = None):
-        try:
-            if branch:
-                repo = Repo.clone_from(url, repo_dir, branch=branch)
-            else:
-                repo = Repo.clone_from(url, repo_dir)
-        except Exception as e:
-            raise e
+        if branch:
+            repo = Repo.clone_from(url, repo_dir, branch=branch)
+        else:
+            repo = Repo.clone_from(url, repo_dir)
 
         return repo
 

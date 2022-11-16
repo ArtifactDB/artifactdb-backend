@@ -16,4 +16,3 @@ def get_plugin_config(config_class, repo_cfg, config_file):
 
     config_file=f"{plugins_path}/{folder}/{config_file}"
     return prepare_config(config_class=config_class, config_file=config_file)
-

@@ -86,8 +86,14 @@ def get_app(config_provider, manager_class, tasks=None):
         app.manager.plugins.git_mgr.get_repos(repos_cfg, pull=True)
 
     for task in tasks:
-        func,opts = task
+        func, opts = task
         app.task(func, **opts)
+        task_def = {
+            "core": True,
+            "callable": "{}::{}".format(func.__module__, func.__name__),
+            "mandatory": True
+        }
+        app.manager.tasks.add_callable_info(func, opts, task_def)
 
     logging.info("Backend manager: {}".format(app.manager))
 
@@ -96,6 +102,6 @@ def get_app(config_provider, manager_class, tasks=None):
 
     if has_tasks:
         app.manager.tasks.register_config_tasks()
-        app.manager.tasks.update_tasks_info()
+        app.manager.tasks.cached_tasks_info.update()
 
     return app

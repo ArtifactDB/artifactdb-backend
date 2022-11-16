@@ -212,7 +212,7 @@ def publish_logstream(self, project_id:str, version:str, message:dict, stage:str
     self._app.send_task("publish_event",kwargs=kw)
     self._app.send_task("append_log",kwargs=kw)
     if hasattr(self._app.manager,"plugins"):  # TODO: improve decoupling?
-        self._app.manager.plugins.call_stage(stage, project_id=project_id, version=version)
+        self._app.manager.tasks.staged_tasks.call_stage(stage, project_id=project_id, version=version)
 
 
 ##################

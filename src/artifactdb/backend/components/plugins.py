@@ -2,8 +2,6 @@
 import os
 import logging
 import glob
-from  deprecated import deprecated
-
 import yaml
 
 from artifactdb.backend.tasks import task_params
@@ -101,10 +99,6 @@ class PluginsManager(BackendComponent):
             manifest = yaml.safe_load(stream)
             manifest['directory'] = os.path.dirname(manifest_path)
             return manifest
-
-    @deprecated(reason="Please use 'call_stage' method from task manager.")
-    def call_stage(self, stage, **kwargs):
-        self.task_mgr.staged_tasks.call_stage(stage, **kwargs)
 
 
 #########
