@@ -24,6 +24,7 @@ from artifactdb.backend.components import locks
 from artifactdb.backend.components import inventories
 from artifactdb.backend.components import queues
 from artifactdb.backend.components import tasks
+from artifactdb.backend.components import inspectors
 from artifactdb.backend.managers.base import BackendManagerBase
 from artifactdb.backend.managers import BulkIndexException
 
@@ -44,6 +45,7 @@ class ArtifactDBBackendManagerBase(BackendManagerBase):
         {"module": inventories, "required": False},
         {"module": tasks, "required": False},
         {"module": plugins, "required": False},
+        {"module": inspectors, "required": False},
     ]
 
     @property

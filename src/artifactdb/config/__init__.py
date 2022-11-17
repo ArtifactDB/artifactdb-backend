@@ -148,8 +148,10 @@ class ArtifactDBConfigBase(ConfigBase):
         's3_inventory':Attr('s3_inventory',S3InventoryConfig),
         'gprn': Attr('gprn', GPRNConfig),
         'celery': Attr('celery', dict),
+        'inspectors': Attr('inspectors',list),
     }
 
+    inspectors = []
     s3_inventory = None
     permissions = PermissionsConfig()
 
