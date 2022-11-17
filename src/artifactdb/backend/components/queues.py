@@ -23,6 +23,10 @@ class QueuesManagerComponent(WrappedBackendComponent):
     def wrapped(self):
         return QueuesManager(self.main_cfg.celery, self.manager.celery_app)
 
+    def post_manager_init(self):
+        logging.info(f"Preparing queues ({self.__class__} post-manager-init)")
+        self.manager.queues.prepare_queues()
+
 
 class QueuesManager:
 

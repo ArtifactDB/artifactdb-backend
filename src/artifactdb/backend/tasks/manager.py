@@ -128,9 +128,13 @@ class TaskManager:
         self.staged_tasks = settings.get("staged_tasks", StagedTasks(celery_app))
         self.registered_tasks = RegisteredTasks()
 
-        cfg_store = self.cfg.celery["tasks_store"]
-        cfg_gprn = self.cfg.gprn
-        self.cached_tasks_info = CachedTasksInfo(cfg_store, cfg_gprn, self.registered_tasks)
+        cfg_store = self.cfg.celery.get("tasks_store")
+        self.cached_tasks_info = None
+        if cfg_store:
+            cfg_gprn = self.cfg.gprn
+            self.cached_tasks_info = CachedTasksInfo(cfg_store, cfg_gprn, self.registered_tasks)
+        else:
+            raise AttributeError("No `tasks_store` defined")
 
     def add_callable_info(self, callable_obj, options, task_def, repo_name=None):
         """Method adds info about callable to 'registered_tasks'."""

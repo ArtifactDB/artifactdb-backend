@@ -73,35 +73,16 @@ def get_app(config_provider, manager_class, tasks=None):
     tasks = TASKS if tasks is None else tasks
     cfg = config_provider()
     app = BackendQueue(cfg, manager_class)
-    has_queues = hasattr(app.manager, "queues")
-    has_plugins = hasattr(app.manager, "plugins")
-    has_tasks = hasattr(app.manager, "tasks")
+    app.manager.post_manager_init()
 
-    if has_queues:
-        app.manager.queues.prepare_queues()
-
-    # get all plugin repository first
-    if has_plugins and app.manager.plugins:
-        repos_cfg = cfg.celery.get('repo')
-        app.manager.plugins.git_mgr.get_repos(repos_cfg, pull=True)
-
+    # register core tasks
     for task in tasks:
         func, opts = task
         app.task(func, **opts)
-        task_def = {
-            "core": True,
-            "callable": "{}::{}".format(func.__module__, func.__name__),
-            "mandatory": True
-        }
-        app.manager.tasks.add_callable_info(func, opts, task_def)
+    app.manager.task_definitions = tasks
+    app.manager.post_tasks_init()
 
+    app.manager.post_final_init()
     logging.info("Backend manager: {}".format(app.manager))
-
-    if has_plugins and app.manager.plugins:
-        app.manager.plugins.register_repository_tasks_safe(pull=True)
-
-    if has_tasks:
-        app.manager.tasks.register_config_tasks()
-        app.manager.tasks.cached_tasks_info.update()
 
     return app

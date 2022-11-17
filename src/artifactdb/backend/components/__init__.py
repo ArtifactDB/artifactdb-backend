@@ -37,6 +37,22 @@ class BackendComponent(metaclass=ABCMeta):
         Optional init step called once the component instance was created
         """
 
+    def post_manager_init(self):
+        """
+        Optional init step called once the backend manager instance was created,
+        and before tasks were registered.
+        """
+
+    def post_tasks_init(self):
+        """
+        Optional init step called once the backend manager's tasks were registered.
+        """
+
+    def post_final_init(self):
+        """
+        Optional init step called just before the backend manager and celery app is returned.
+        """
+
     @property
     @abstractproperty
     def DEPENDS_ON(self):

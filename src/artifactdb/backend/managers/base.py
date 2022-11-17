@@ -20,6 +20,7 @@ class BackendManagerBase:
         self.cfg = cfg
         self.celery_app = celery_app
         #self._proxied = {}  # hold proxied/patched methods from components (see __getattr__)
+        self.registered_components = []
         self.register_components()
 
     def build(self, component_class, required=None):
@@ -79,6 +80,7 @@ class BackendManagerBase:
         for component in self.__class__.COMPONENTS:
             self.patch_backend_methods(component["module"])
         _ = [comp.component_init() for comp in built_components]
+        self.registered_components = built_components
 
     def build_components(self):
         registered = []
@@ -113,6 +115,31 @@ class BackendManagerBase:
             registered.append(component_inst)
 
         return registered
+
+    def _post_what(self, method_name):
+        for component in self.registered_components:
+            getattr(component,method_name)()
+
+    def post_manager_init(self):
+        """
+        Hook calling component's `post_manager_init()` to let components optionally
+        initialize states once the backend manager itself is ready
+        """
+        self._post_what("post_manager_init")
+
+    def post_tasks_init(self):
+        """
+        Hook calling component's `post_tasks_init()` to let components optionally
+        initialize states once the backend manager's tasks were regiserted.
+        """
+        self._post_what("post_tasks_init")
+
+    def post_final_init(self):
+        """
+        Hook calling component's `post_final_init()` to let components optionally
+        initialize states, just before the backend and celery app is returned
+        """
+        self._post_what("post_final_init")
 
     @classmethod
     def replace_component(cls, module_name, **component_kwargs):
