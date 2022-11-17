@@ -9,7 +9,12 @@ import artifactdb
 from .utils import PrintableYamlConfig, ApiConfigBaseHandler, init_model
 from .auth import AuthConfigBase
 from .cors import CorsConfig
-from .storages import set_storage_models, set_legacy_s3_config
+from .storages import set_storage_models, set_legacy_s3_config, StorageConfig, S3InventoryConfig
+from .elasticsearch import ElasticMainConfig
+from .locks import LockConfig
+from .permissions import PermissionsConfig
+from .schemas import SchemaConfig
+from .gprns import GPRNConfig
 
 
 #########################
@@ -132,4 +137,20 @@ class ArtifactDBConfigBase(ConfigBase):
         set_storage_models,
         set_legacy_s3_config,
     ]
+
+    __mapping__ = {
+        'es': Attr('es', ElasticMainConfig),  # {"<schema_version>": ElasticsearchConfig}
+        'storage': Attr('storage', StorageConfig),
+        'lock': Attr('lock', LockConfig),
+        'permissions': Attr('permissions', PermissionsConfig),
+        'schema': Attr('schema', SchemaConfig),
+        'sequence': Attr('sequence',list),
+        's3_inventory':Attr('s3_inventory',S3InventoryConfig),
+        'gprn': Attr('gprn', GPRNConfig),
+        'celery': Attr('celery', dict),
+    }
+
+    s3_inventory = None
+    permissions = PermissionsConfig()
+
 
