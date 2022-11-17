@@ -154,6 +154,7 @@ class ArtifactDBBackendManagerBase(BackendManagerBase):
             else:
                 logging.warning("No previously stored revision found for {}/{}".format(project_id,version))
 
+        self.inspectors_manager.inspect(project_id,version)
         docs = self.get_documents(project_id,version)
         self.set_schema_name(docs)
         self.set_transient(docs,project_id,version,transient)

@@ -1,6 +1,7 @@
 import os
 import logging
 import datetime
+import json
 
 from artifactdb.backend.components import WrappedBackendComponent
 from artifactdb.identifiers.gprn import get_parents, lca, get_lineage
@@ -44,8 +45,8 @@ class InspectorsManager:
             else:
                 raise InspectorError(f"Inspector type {dinspect['type']!r} is not supported")
 
-    def generate_metapath(self, meta):
-        return os.path.join(self.internal_meta_folder,meta["path"] + ".json")
+    def generate_metapath(self, meta, project_id, version):
+        return os.path.join(project_id, version, self.internal_meta_folder,meta["path"] + ".json")
 
     def inspect_s3data(self, s3data, project_id, version):
         """
@@ -54,12 +55,12 @@ class InspectorsManager:
         """
         metas = []
         for alias,inspector in self.inspectors.items():
-            logging.debug("Inspecting {s3data['Key']} with {inspector}")
+            logging.debug(f"Inspecting {s3data['Key']} with {inspector}")
             inspected = inspector.inspect(s3data, project_id, version)
             if inspected:
                 # ensure $schema, in case the inspector forgot to put it
                 inspected["$schema"] = inspector.schema
-                metapath = self.generate_metapath(inspected)
+                metapath = self.generate_metapath(inspected,project_id,version)
                 metas.append((metapath,inspected))
 
         return metas
@@ -67,7 +68,14 @@ class InspectorsManager:
     def inspect(self, project_id, version):
         metas = []
         for s3data in self.manager.s3.list_folder(os.path.join(project_id,version)):
+            if s3data["Key"].startswith(os.path.join(project_id,version,self.internal_meta_folder)) \
+                or s3data["Key"].endswith(".json"):
+                continue  # it's a previously inspected meta or an uploaded metadata
             metas.extend(self.inspect_s3data(s3data, project_id, version))
+        logging.debug(f"While inspecting, generated {len(metas)} metadata file(s)")
+        for metapath,meta in metas:
+            logging.debug(f"Uploading {metapath}")
+            self.manager.s3.upload(metapath,json.dumps(meta,indent=2),content_type="application/json")
         
         return metas
 
