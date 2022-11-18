@@ -28,7 +28,7 @@ import mycustom.builder.notifications
 class MyBackendManager(artifactdb.backend.managers.base.BackendManagerBase):
 
     COMPONENTS = [
-        {"module": artifactdb.backend.sequences", "required": True},
+        {"module": artifactdb.backend.sequences, "required": True},
         {"module": mycustom.builder.notifications, "required": False}
     ]
 ```
