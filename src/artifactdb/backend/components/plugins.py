@@ -102,11 +102,11 @@ class PluginsManager(BackendComponent):
     def post_manager_init(self):
         logging.info(f"Initializing plugins repos ({self.__class__} post-manager-init)")
         repos_cfg = self.cfg.celery.get('repo')
-        self.manager.plugins.git_mgr.get_repos(repos_cfg, pull=True)
+        self.git_mgr.get_repos(repos_cfg, pull=True)
 
     def post_tasks_init(self):
         logging.info(f"Registering tasks from plugins repos ({self.__class__} post-tasks-init)")
-        self.manager.plugins.register_repository_tasks_safe(pull=True)
+        self.register_repository_tasks_safe(pull=True)
 
 
 #########
