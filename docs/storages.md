@@ -132,6 +132,10 @@ Each storage must declare:
 
 When using multiple storages, a switch can be used to specifcy which one to use depending on the request.
 
+- `header`: the HTTP header name based on which the storage selection decision is made.
+- `contexts`: map of header value <=> storage alias. When the above header's value matches on of these, the
+  corresponding storage is selected (based on its alias name).
+
 ### Example
 
 The following example illustrates the usage of multiple storages when upgrading an API. Let's say the API in question
