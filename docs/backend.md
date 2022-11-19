@@ -73,4 +73,4 @@ each successfully registered components:
 - `post_final_init()`: finally, before returning the final Celery application and its linked backend manager, this
   method is called for "last-call init".
 
-
+## Transient 

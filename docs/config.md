@@ -4,7 +4,7 @@ ArtifactDB configuration can be described in YAML files. The content is organize
 different components of an ArtifactDB instance, such as Elasticsearch, storages, schemas, etc... A single YAML file can
 be used, but can also result in a lenghty content. To address this issue, the configuration content can optionally be
 split across multiple files. These files are loaded and merged sequentially, based on the root-level keys representing
-*sections* (see below), in alphatical order. If multiple files contains duplicated configuration content, the last one
+*sections* (see below), in alphatical order. If multiple files contains duplicated configuration content, the last
 merged one will take precedence.
 
 ## Sections
