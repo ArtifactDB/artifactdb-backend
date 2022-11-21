@@ -486,4 +486,4 @@ class DynamoDBManagerBase:
     def describe_table(self, table):
         """Function returns table description from DynamoDB."""
         table_name = self.generate_table_name(table)
-        return self.client.describe_table(TableName = table_name)
+        return self.client.describe_table(TableName=table_name)['Table']
