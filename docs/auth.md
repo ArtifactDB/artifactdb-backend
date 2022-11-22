@@ -5,6 +5,8 @@ is an encoded and signed JSON document, containing header and claims. The header
 that can be used to verify the signature, while the claims contains the actual payload: the name of the user, the client
 ID, the roles, etc...
 
+## JWT based authentication
+
 Upon reception of an HTTP request from a client, a FastAPI "authentication" middleware intercepts that request to extract the
 authentication information. Specifically, it expects that such information, if present, must be found in the header
 `Authorization`, with a value looking like `Bearer token_string` [^1]. The auth middleware proceeds by validating the
@@ -61,3 +63,31 @@ type (anonymous, authenticated, admin) to adjust the permission-based filtering 
 only publicly readble projects for anonymous users).
 
 [^1]: https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-bearer-19#page-5
+
+
+## "IKYS" API key based authentication
+
+For very specific use cases, another authentication method is available. IKYS ("I Know Your Secret") API key can be used
+when a component of an ArtifactDB deployment needs to gain access to the REST API as "admin". The authentication method
+is based on the fact that this component (eg. a pod living in the same namespace as the instance) can have access to the
+same secrets as the instance itself. That component is able to know one of the secrets of the instance, secrets which
+are never exposed outside of the Kubernetes deployment itself.
+
+Enabling this authentication requires to pass a custom HTTP header named `X-IKYS-API-Key`. Its value is an base64
+encoded JSON document about the secret. Ex:
+
+```
+{
+    "type": "ikys",
+    "hash_function": "sha256",
+    "hashed_secret": "abcazer145...",
+    "secret_path": "./path/to/secret/on/frontend/pod/side"
+}
+```
+
+The secret path is tells the REST API where the secret the other component is located and knows about. The file hashed
+using the passed hashed function, the hexdigest put in the JSON document.
+
+Again, the authentication method fits very special use cases, implying access to the internal instance deployment. Such
+use case is a Kubernetes operator, deployed along side the instance, which needs full access to the REST API to control
+and operate on it. It is not meant to be made for external users or services, it not a "classic" API key.

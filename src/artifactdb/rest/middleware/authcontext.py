@@ -2,6 +2,9 @@ import re
 import json
 import logging
 import time
+import base64
+import hashlib
+from binascii import Error as DecodeError
 
 import cacheout
 import asks  # async requests lib
@@ -18,6 +21,9 @@ from artifactdb.backend.caches import get_cache
 from artifactdb.utils.context import auth_user_context, skip_auth_context
 from artifactdb.rest.auth import AdminUser, RootUser, AuthenticatedUser, AnonymousUser, Resource, \
                                  UnknownPublicKeyError, InvalidTokenSignature, ExpiredTokenError, PresignedUser
+
+
+class IKYSError(Exception): pass
 
 
 class AuthContextMiddleware:
@@ -62,6 +68,26 @@ class AuthContextMiddleware:
 
     async def get_public_key_data(self, headers):
         return await self.authorizer.oidc_fetcher.get_public_key_data(headers["kid"])
+
+    def verify_ikys(self, header_value):
+        """
+        X-API-IKYS-Key is a special API key that is generated based on a secret that the frontend
+        knows. IKYS stands for "I Know Your Secret". The purpose of this API key is for local pods
+        to talk to the REST API as an admin, without having to have a JWT token for that. The idea is
+        because this other pod is deployed in the same namespace as the frontend pod, it can access one
+        of the frontend secret. Doing, a JSON document is created with a hash of that secret, then base64
+        encoded and passed in that special header. The verification happens here.
+        """
+        decoded = base64.b64decode(header_value.encode()).decode()
+        jdoc = json.loads(decoded)
+        if not jdoc.get("type") or jdoc["type"] != "ikys":
+            raise IKYSError("Excepting 'ikys' as key type, got {}".format(jdoc.get("type")))
+        hfunc = getattr(hashlib,jdoc["hash_function"])
+        local_content = open(jdoc["secret_path"]).read()
+        local_hash = hfunc(local_content.encode()).hexdigest()
+        if local_hash != jdoc["hashed_secret"]:
+            raise IKYSError("Given hashed secret doesn't match local computed one")
+        # if we get there, all good.
 
     async def get_dist_lists(self, user):
         response = await asks.get(self.dist_list_url_template.format(user.unixID))
@@ -147,6 +173,16 @@ class AuthContextMiddleware:
             else:
                 # authenticated user without roles
                 auth_user = AuthenticatedUser(unixID=unix_id)
+        elif "x-api-ikys-key" in request.headers:
+            try:
+                self.verify_ikys(request.headers["x-api-ikys-key"])
+                auth_user = AdminUser(unixID="ikys-challenger",roles=["admin"])
+            except (DecodeError, json.JSONDecodeError, FileNotFoundError, KeyError,
+                    AttributeError, IKYSError) as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid IKYS key: {e}",
+                )
         else:
             auth_user = AnonymousUser()
 
