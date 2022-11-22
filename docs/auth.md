@@ -73,7 +73,7 @@ is based on the fact that this component (eg. a pod living in the same namespace
 same secrets as the instance itself. That component is able to know one of the secrets of the instance, secrets which
 are never exposed outside of the Kubernetes deployment itself.
 
-Enabling this authentication requires to pass a custom HTTP header named `X-IKYS-API-Key`. Its value is an base64
+Enabling this authentication requires to pass a custom HTTP header named `X-API-IKYS-Key`. Its value is an base64
 encoded JSON document about the secret. Ex:
 
 ```
