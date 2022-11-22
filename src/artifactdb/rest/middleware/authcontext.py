@@ -177,6 +177,7 @@ class AuthContextMiddleware:
             try:
                 self.verify_ikys(request.headers["x-api-ikys-key"])
                 auth_user = AdminUser(unixID="ikys-challenger",roles=["admin"])
+                logging.debug(f"IKYS API Key provided, injecting user {auth_user} in context")
             except (DecodeError, json.JSONDecodeError, FileNotFoundError, KeyError,
                     AttributeError, IKYSError) as e:
                 raise HTTPException(
