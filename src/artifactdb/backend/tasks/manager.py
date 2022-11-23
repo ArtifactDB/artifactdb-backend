@@ -29,11 +29,10 @@ class RegisteredTasks:
             self.plugin_tasks[repo_name] = copy.deepcopy(r_cfg)
             self.plugin_tasks[repo_name]['tasks'] = []
 
-    def add_task(self, task, call_info, repo_name=None):
+    def add_task(self, task, repo_name=None):
         """Add information about task from the repo with given name.
         If 'repo_name' is not defined the task will be added as a core tasks."""
         new_task = copy.deepcopy(task)
-        new_task.update(call_info)
 
         if repo_name:
             self.plugin_tasks[repo_name]['tasks'].append(new_task)
@@ -138,9 +137,13 @@ class TaskManager:
 
     def add_callable_info(self, callable_obj, options, task_def, repo_name=None):
         """Method adds info about callable to 'registered_tasks'."""
+        task_name = options['name']
         keep_self = not options.get('bind', False)
         call_info = get_callable_info(callable_obj, keep_self)
-        self.registered_tasks.add_task(task_def, {"callable_info": call_info}, repo_name)
+        task = {"name": task_name}
+        task.update(task_def)
+        task.update({"callable_info": call_info})
+        self.registered_tasks.add_task(task, repo_name)
 
     def register_config_tasks(self):
         """Method registers all task in Celery app, schedules them and prepares routes.

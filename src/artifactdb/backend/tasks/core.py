@@ -17,7 +17,7 @@ from . import task_params
 # CORE TASKS #
 ##############
 
-@task_params(bind=True,name="index",autoretry_for=RETRYABLE_EXCEPTIONS,default_retry_delay=30)
+@task_params(bind=True,name="index",autoretry_for=RETRYABLE_EXCEPTIONS,default_retry_delay=30,private=True)
 def index(self, project_id, *args, **kwargs):
     # no publish if coming from index_all, which sets this flag
     skip_publish = kwargs.pop("skip_publish",False)
@@ -41,7 +41,7 @@ def index(self, project_id, *args, **kwargs):
     return res
 
 
-@task_params(bind=True,name="index_all",autoretry_for=RETRYABLE_EXCEPTIONS,default_retry_delay=30)
+@task_params(bind=True,name="index_all",autoretry_for=RETRYABLE_EXCEPTIONS,default_retry_delay=30,private=True)
 def index_all(self, project_ids=None, storage_alias=None, *args, **kwargs):  # pylint: disable=unused-argument
     try:
         project_ids = project_ids['project_ids'] if project_ids else self._app.manager.list_projects()

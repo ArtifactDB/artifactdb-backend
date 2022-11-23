@@ -37,12 +37,14 @@ class BackendQueue(Celery):
     def task(self, *args, **kwargs):
         """
         Register task and remember the task priorities. Registering task is done with Celery 'task' method.
-        Priorities are stored in memory and used when the task is sended (see 'send_task').
-        It allows to set priority for the task which is not possible with Celery object where the priority have to be defined in 'send_task' method.
+        Priorities are stored in memory and used when the task is sent (see 'send_task').
+        It allows to set priority for the task which is not possible with Celery object
+        where the priority have to be defined in 'send_task' method.
         If priority parameter is None it uses default value for priority.
         """
         task_name = kwargs['name']
-        has_queues_mgr = hasattr(self.manager, "queues") # for backward compatibility with older instances without QueuesManager
+        # for backward compatibility with older instances without QueuesManager:
+        has_queues_mgr = hasattr(self.manager, "queues")
         default_priority = has_queues_mgr and self.manager.queues.default_priority
         priority = kwargs.get('priority', default_priority)
         self.task_priorities[task_name] = priority
@@ -52,7 +54,7 @@ class BackendQueue(Celery):
     def send_task(self, task_name, *args, **kwargs):
         """
         Send task with Celery 'send_task' method - the place where priorities can be defined for Celery object.
-        If prority is not defined in kwargs it used prority defined in task definition (see 'task' method).
+        If priority is not defined in kwargs it used priority defined in task definition (see 'task' method).
         """
         if 'priority' not in kwargs:
             priority = self.task_priorities[task_name]

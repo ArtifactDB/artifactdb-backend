@@ -7,6 +7,8 @@ from artifactdb.backend.components.queues import DEFAULT_TASK_PRIORITY
 from artifactdb.backend.tasks.core import task_params
 from artifactdb.utils.misc import compile_python_file
 
+class PluginsRunException(Exception):
+    """Exception for running plugin tasks."""
 
 def is_plugin(task_def):
     """Function checks if defined tasks come from plugin repository."""
@@ -30,14 +32,21 @@ def prepare_plugin_task(name, task, path_to_tasks, **gen_kwargs):
 
     try:
         task_callable = get_plugin_callable(task, path_to_tasks)
+        task_config_params = task.get('task_params', {})
 
-        @task_params(bind=True, name=name, autoretry_for=RETRYABLE_EXCEPTIONS, default_retry_delay=30, priority=priority)
+        @task_params(bind=True, name=name, autoretry_for=RETRYABLE_EXCEPTIONS, default_retry_delay=30,
+                     priority=priority, **task_config_params)
         def repo_task_func_staged(self_obj, **kwargs):
             try:
                 gen_kwargs.update(kwargs)
                 return task_callable(self_obj, **gen_kwargs)  # context
             except Exception as e: # pylint: disable=broad-except # catching all exceptions for called plugin task
-                logging.exception(f"Exception from registering plugin task: {e}")
+                err_msg = f"Plugin task exception during call: {e}"
+                logging.exception(err_msg)
+                # The exception during the task run does not stop main instance of Celery.
+                # Raising the exception here is necessary to show correct message in
+                # job response - the result of PUT \task\run endpoint
+                raise PluginsRunException(err_msg)
 
         return repo_task_func_staged
 
