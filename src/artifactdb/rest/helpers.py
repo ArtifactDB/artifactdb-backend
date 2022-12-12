@@ -1,5 +1,4 @@
 import logging
-from urllib.parse import urljoin
 
 from elasticsearch.exceptions import RequestError
 
@@ -34,7 +33,7 @@ def get_job_response(job_id, request=None):
     job_url = path
     if request:
         root_url = get_root_url(request)
-        job_url = urljoin(root_url,path)
+        job_url = f"{root_url}{path}"
 
     content = SubmittedJob(status="accepted",job_url=job_url,job_id=job_id,path=path)
     headers = {"link": f"<{content.job_url}>; rel=status"}

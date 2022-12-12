@@ -1,8 +1,10 @@
+import re
 import json
 import base64
 import hashlib
 import uuid
 import binascii
+import logging
 import urllib.parse as urlparse
 from urllib.parse import urlencode, parse_qs
 
@@ -48,7 +50,6 @@ class RedisPresignURLManager(PresignURLManagerBase):
         Generate a temp credential to access `path` with `method`,
         given the authentication context `user`
         """
-
         jti = None
         if user and user.token:
             # associate the signature with a token ID "jti"
@@ -108,10 +109,36 @@ class RedisPresignURLManager(PresignURLManagerBase):
         # if we get there, it's all good!
         return signature
 
-    def generate(self, method, path, user=None, ttl=None):
+    def get_request_prefix(self, request, header="x-adb-prefix"):
+        return request.headers.get(header).rstrip("/")
+
+    def resolve_path_prefix(self, path, request):
+        """
+        `request` could have been proxied, meaning we need re-include the proxied path to return a reachable/valid URL.
+        Conviniently (...), a header is dedicated for that, containing the prefix to prepend, "X-ADB-Prefix"
+        """
+        resolved_path = path
+        prefix = self.get_request_prefix(request)
+        if prefix:
+            prefix = prefix.rstrip("/")
+            stripped_path = path.lstrip("/")
+            resolved_path = f"{prefix}/{stripped_path}"
+            logging.debug(f"Found proxied context with prefix, path {path!r} resolved to {resolved_path!r}")
+
+        return resolved_path
+
+    def generate(self, method, path, user=None, request=None, ttl=None):
+        """
+        Generate a presign URL, for given `method` and `path`.
+        """
         signature = self.sign(method,path,user,ttl)
+        url_path = path
+        # url_path corresonds to a reachable URL path, which can be different in a context of proxied request involving
+        # a prefix. This is only activated if a `request` object was provided.
+        if request:
+            url_path = self.resolve_path_prefix(path,request)
         # add signature to the URL
-        url_parts = list(urlparse.urlparse(path))
+        url_parts = list(urlparse.urlparse(url_path))
         query = dict(urlparse.parse_qsl(url_parts[4]))
         query.update({X_ADB_CREDENTIAL:signature})
         url_parts[4] = urlencode(query)
@@ -125,13 +152,17 @@ class RedisPresignURLManager(PresignURLManagerBase):
             return
 
         signature = self.verify(cred)
+        internal_path = signature.get("path")
+        # get rid of URL prefix if any, as the API signs the URL as internal path, once
+        # it got through the ingress/proxy
+        url_path = re.sub(self.get_request_prefix(request),"",request.url.path)
 
         if user and signature.get("jti") != user.token.claims.get("jti"):
             raise CredentialError("'jti' don't match, not allowed")
         if request.method.lower() != signature.get("method","").lower():
             raise CredentialError("'method' don't match, not allowed")
-        if request.url.path != signature.get("path"):
-            raise CredentialError("'path' don't match, not allowed ({} != {})".format(request.url.path,signature.get("path")))
+        if url_path != internal_path:
+            raise CredentialError(f"'path' don't match, not allowed ({url_path!r} != {internal_path!r})")
         for param in request.query_params.keys():
             if param == X_ADB_CREDENTIAL:
                 continue  # never part of signature (obviously, it's the signature...)

@@ -2,6 +2,7 @@
 import logging
 
 from fastapi import Depends, Query
+from fastapi.requests import Request
 from starlette.responses import RedirectResponse
 
 from artifactdb.utils.stages import CREATED, VERSION_CREATED, INDEXED, PURGED, FAILED
@@ -26,6 +27,7 @@ class SequencesResource(ResourceBase):
                 tags=["projects"],
                 status_code=307)
         async def create_project(
+            request:Request,
             contract:UploadContract,
             prefix:str = Query(None,description="Force project ID prefix instead of using default one"),
             seq_mgr=Depends(cls.deps.get_sequence_manager),
@@ -51,8 +53,9 @@ class SequencesResource(ResourceBase):
             # the fully qualified upload endpoint requires "uploader" role by default, if directly accessed.
             # but we have a creator role here, so we need to provide a temporary access to that endpoint
             # for that specific user, for a limited amount of time
+            # obtain a legit path is request was proxied, to generate a reachable URL
             path = f"/projects/{next_pid}/version/{next_version}/upload"
-            credential_path = presign_mgr.generate("POST",path,user=auth)
+            credential_path = presign_mgr.generate("POST",path,user=auth,request=request)
             response = RedirectResponse(url=credential_path)
             # open log stream to collect info about this new project, until "indexed"
             await open_log_request(
@@ -72,6 +75,7 @@ class SequencesResource(ResourceBase):
                 tags=["projects"],
                 status_code=307)
         async def create_version(
+            request:Request,
             contract:UploadContract,
             project_id:str = Query(...,description="Project ID",example="GPA2"),
             seq_mgr=Depends(cls.deps.get_sequence_manager),
@@ -118,7 +122,7 @@ class SequencesResource(ResourceBase):
 
             logging.info(f"Requested new version '{project_id}/{next_version}'")
             path = f"/projects/{project_id}/version/{next_version}/upload"
-            credential_path = presign_mgr.generate("POST",path,user=auth)
+            credential_path = presign_mgr.generate("POST",path,user=auth,request=request)
             response = RedirectResponse(url=credential_path)
             # open log stream to collect info about this new version, until "indexed"
             await open_log_request(
