@@ -69,8 +69,7 @@ available in the admin container itself. `wetty` is then started, within the pyt
 image.
 
 [^2]: The Olympus Maintainer Operator is a Kubernetes operator responsible for keeping the instance healthy and perform
-  maintenance operation. You can read more of this operator
-  [here](https://code.roche.com/GP/Olympus/-/blob/main/books/maintainer/mo.pdf)
+  maintenance operation.
 
 TODO: link to deploy
 TODO: link to admin shell usage

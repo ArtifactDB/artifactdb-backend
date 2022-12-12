@@ -45,7 +45,7 @@ class Permissions(BaseModel):
         schema_extra = {
             "example": {
                 "owners" : ["user1","user2"],
-                "viewers": "research-d@gene.com",
+                "viewers": "d-list@mycompany.com",
                 "read_access": "viewers",
                 "write_access": "owners",
             }
