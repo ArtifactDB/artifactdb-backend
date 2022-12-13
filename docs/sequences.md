@@ -59,33 +59,9 @@ TODO: image pools, provisioned active/inactive, restricted, overlapping
 
 #### API endooint
 
-There are multiple REST endpoints involved. The first set involves endpoints which indirectly implies sequences, that
-is, when creating a new project and/or version.
-
-TODO: link to "Uploading data and metadata" section
-
-- `POST /projects/upload` is used to ask the instance to provision both a project ID, as well as a first version.
-- `POST /projects/{project_id}/upload` is used to provision a new version within an existing project. It will fail if
-  that project doesn't exist.
-- `POST /projects/{project_id}/version/{version}/upload`, see below the different use cases
-
-The first two endpoints require, by default, the role `creator`, to limit, if necessary, the process of project creation
-to a set of users. Upon project and/or version provisioning, the endpoint redirects to the same endpoint, the third one,
-`POST /projects/{project_id}/version/{version}/upload`. This endpoint is also used with external provisioning (not
-auto-provisioning), where `project_id` and `version` are provided by the client. To prevent everybody from this
-endpoint, possibly overwriting or corrupting an existing project, the role `uploader` is required in the default
-authorization configuration.
-
-This last endpoint requires the role `uploader`, but going through auto-provisioning and with the first endpoints
-`POST /projects/upload` and `POST /projects/{project_id}/upload`, the role `creator` is required. Yet both these
-endpoints will redirect to the one requiring `uploader` permissions. How so?  The instance uses an internal pre-signed
-URL mechanism to temporarily promote the user's role to `uploader`, specifically and only for that request (the
-pre-signed upload URL can't be reused for other projects).
-
-TODO: link to "Internal pre-signed URL" section
-
-Other endpoints can be used to collect information about the different sequences state. These require by default the
-role `admin`.
+The sequence information (project ID and version) are used while uploading artifacts, see section [upload](usage/upload)
+for more. Other endpoints can be used to collect information about the different sequences state. These require by
+default the role `admin`.
 
 - `GET /sequences` returns exhautive information for all sequence clients, including the project prefix, the provisioned
   and restricted pools, the last provisioned ID, etc...
