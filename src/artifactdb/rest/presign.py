@@ -110,7 +110,7 @@ class RedisPresignURLManager(PresignURLManagerBase):
         return signature
 
     def get_request_prefix(self, request, header="x-adb-prefix"):
-        return request.headers.get(header).rstrip("/")
+        return request.headers.get(header,"").rstrip("/")
 
     def resolve_path_prefix(self, path, request):
         """
