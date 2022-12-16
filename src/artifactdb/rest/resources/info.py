@@ -31,7 +31,14 @@ class InfoResource(ResourceBase):
                 "swagger": swagger_url,
                 "doc": cfg.doc_url,
                 "description": cfg.description,
+                "sequences": [],
             }
+            for seq in cfg.sequence:
+                results["sequences"].append({
+                    "prefix": seq["project_prefix"],
+                    "default": seq.get("default",False),
+                    "test": seq["project_prefix"].startswith("test-"),
+                })
 
             return results
 
