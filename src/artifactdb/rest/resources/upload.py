@@ -162,7 +162,7 @@ def get_link_or_presigned_url(s3, es, cfg, request, project_id, version, fileded
         else:
             logging.info(f"Found duplicate {source_aid} => {target_aid}")
             uri_path = get_link_path(project_id,version,info.filename,target_aid)
-            url = generate_url(cfg,request,uri_path)
+            url = uri_path
             is_link = True
     else:
         url = get_presigned_url(s3,project_id,version,info.filename,presigned_ttl)
@@ -332,8 +332,10 @@ class UploadResource(ResourceBase):
                     pre_sign_ttl = (purge_dt - datetime.datetime.now(tz=tzlocal.get_localzone())).seconds
                     completion_url = presign_mgr.generate("PUT", completion_url, user=auth, ttl=pre_sign_ttl)
                     abort_url = presign_mgr.generate("PUT", abort_url, user=auth, ttl=pre_sign_ttl)
+                    root_url = get_root_url(request)
                     for filename,link_url in links.items():
-                        links[filename] = presign_mgr.generate("PUT", link_url, user=auth, ttl=pre_sign_ttl)
+                        signed = presign_mgr.generate("PUT", link_url, user=auth, ttl=pre_sign_ttl)
+                        links[filename] = f"{root_url}{signed}"
 
                 if contract.mode == UploadMode.S3_PRESIGNED_URL:
                     instructions["presigned_urls"] = urls
