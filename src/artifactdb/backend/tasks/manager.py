@@ -60,7 +60,6 @@ class CachedTasksInfo:
         self.store = cfg_store
         self.cfg_gprn = cfg_gprn
         self.cache = get_cache(self.store)
-
         self.registered_tasks = registered_tasks
 
     def _get_plugin_key(self):
@@ -132,8 +131,6 @@ class TaskManager:
         if cfg_store:
             cfg_gprn = self.cfg.gprn
             self.cached_tasks_info = CachedTasksInfo(cfg_store, cfg_gprn, self.registered_tasks)
-        else:
-            raise AttributeError("No `tasks_store` defined")
 
     def add_callable_info(self, callable_obj, options, task_def, repo_name=None):
         """Method adds info about callable to 'registered_tasks'."""
@@ -149,6 +146,8 @@ class TaskManager:
         """Method registers all task in Celery app, schedules them and prepares routes.
         The tasks definition is taken from configuration file."""
         self.register(self.tasks_def)
+        if self.cached_tasks_info:
+            self.cached_tasks_info.update()
 
     def register(self, tasks_def, repo_cfg=None, path_to_tasks=""):
         """Register tasks."""

@@ -43,7 +43,7 @@ class ArtifactDBBackendManagerBase(BackendManagerBase):
         # Recommended but optionals
         {"module": sequences, "required": False},
         {"module": inventories, "required": False},
-        {"module": tasks, "required": False},
+        {"module": tasks, "required": True},
         {"module": plugins, "required": False},
         {"module": inspectors, "required": False},
     ]

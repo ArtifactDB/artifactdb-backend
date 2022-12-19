@@ -34,10 +34,10 @@ class TasksResource(ResourceBase):
             tasks=Depends(cls.deps.get_tasks),
             _: str = Depends(cls.deps.get_authorizer(roles=["admin"], access_rules=[]))
         ):
-            if tasks:
+            if tasks and tasks.cached_tasks_info:
                 return tasks.cached_tasks_info.get_plugin_tasks()
             else:
-                raise APIErrorException(501, status="error", reason="Plugins not enabled.")
+                raise APIErrorException(501, status="error", reason="Plugins (or tasks) component not enabled.")
 
         @cls.router.get("/tasks",
                       description="Returns information about all registered tasks for this API",
@@ -46,10 +46,10 @@ class TasksResource(ResourceBase):
             tasks=Depends(cls.deps.get_tasks),
             _: str = Depends(cls.deps.get_authorizer(roles=["admin"], access_rules=[]))
         ):
-            if tasks:
+            if tasks and tasks.cached_tasks_info:
                 return tasks.cached_tasks_info.get_tasks()
             else:
-                raise APIErrorException(501, status="error", reason="Registering tasks not enabled.")
+                raise APIErrorException(501, status="error", reason="Tasks component not enabled.")
 
 
         #############

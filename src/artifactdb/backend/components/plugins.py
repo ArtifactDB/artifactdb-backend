@@ -101,7 +101,7 @@ class PluginsManager(BackendComponent):
 
     def post_manager_init(self):
         logging.info(f"Initializing plugins repos ({self.__class__} post-manager-init)")
-        repos_cfg = self.cfg.celery.get('repo')
+        repos_cfg = self.cfg.celery.get('repo',[])
         self.git_mgr.get_repos(repos_cfg, pull=True)
 
     def post_tasks_init(self):

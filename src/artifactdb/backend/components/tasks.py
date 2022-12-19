@@ -33,5 +33,4 @@ class TaskManagerComponent(WrappedBackendComponent):
     def post_final_init(self):
         logging.info(f"Registering config-based tasks ({self.__class__} post-final-init)")
         self.manager.tasks.register_config_tasks()
-        self.manager.tasks.cached_tasks_info.update()
 
