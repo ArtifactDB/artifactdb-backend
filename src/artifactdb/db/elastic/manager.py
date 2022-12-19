@@ -686,6 +686,7 @@ class ElasticManager:
         # we should have 3 parts: api_name, env, and trailing part after the last "-"
         # but the version (v3, v3-dynamic, ...) can be "-" in it so we just "eat" the first 2 parts
         # api_name and env, which by conventions can't have "-" in it
+        assert len(parts) == 3, f"Inconsistent index names, can't determine common prefix: {self.active_indices}"
         parts.pop()
         api_name,env = parts[0],parts[1]
         prefix = f"{api_name}-{env}"
