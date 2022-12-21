@@ -22,7 +22,12 @@ class InfoResource(ResourceBase):
                 swagger_url += "/"
             swagger_url += "__swagger__"
 
+            # auth clients: main (the one used in swagger, principal), and alternate/others
+            # main is part of known clients, but we want separate category
+            others = set(cfg.auth.clients.known).difference({cfg.auth.oidc.client_id})
+
             results = {
+                "name": cfg.name,
                 "version": cfg.version,
                 "image": cfg.image,
                 "env": cfg.env,
@@ -32,13 +37,22 @@ class InfoResource(ResourceBase):
                 "doc": cfg.doc_url,
                 "description": cfg.description,
                 "sequences": [],
+                "auth": {
+                    "clients": {
+                        "main": cfg.auth.oidc.client_id,
+                        "others": others,
+                    }
+                }
             }
+            # project prefixes
             for seq in cfg.sequence:
                 results["sequences"].append({
                     "prefix": seq["project_prefix"],
                     "default": seq.get("default",False),
-                    "test": seq["project_prefix"].startswith("test-"),
+                    "test": seq.get("test") or seq["project_prefix"].startswith("test-"),
                 })
+
+
 
             return results
 

@@ -14,6 +14,7 @@ class SequenceConfig(PrintableYamlConfig):
         'version_first': Attr('version_first',str),
         'auto_create_pool': Attr('auto_create_pool',bool),
         'default': Attr('default',bool),
+        'test': Attr('test',bool),
         'debug': Attr('debug', bool),
     }
     uri = None
@@ -31,6 +32,8 @@ class SequenceConfig(PrintableYamlConfig):
     version_first = "1"
     # if no prefix is specified, should that client be the default one
     default = False
+    # indicates that this sequence prefix should be used for tests purpose
+    test = False
     # upon creation/init, should a provisioned pool be automatically created?
     # this is useful (True) for test environment, for prod environment,
     # it's recommended to go through an init from s3
