@@ -945,21 +945,33 @@ class ElasticManager:
             yield doc
 
     def delete_project(self, project_id, version=None):
-        # this goes through auth, first searching documents, so
-        # only those which belong to auth user will be deleted
-        results = self.search_by_project_id(project_id,version)
         # using bulk, group by indices (ie. underlying ES clients)
         per_indices = {}
-        for hit in results["hits"]["hits"]:
-            per_indices.setdefault(hit["_index"],[]).append({"_id":hit["_id"]})
+        # this goes through auth, first searching documents, so
+        # only those which belong to auth user will be deleted
+        results = self.search_by_project_id(project_id, version, fields=["_extra.id"])
+
+        # first pass: scroll all docs
+        while True:
+            for hit in results["hits"]["hits"]:
+                per_indices.setdefault(hit["_index"], []).append({"_id": hit["_id"]})
+            scroll_id = results.get("_custom_scroll_id") or results.get("_scroll_id")
+            if scroll_id:
+                results = self.scroll(scroll_id)
+            else:
+                break
+
+        # second pass: delete found docs (note: we can't deleting while scrolling because
+        # deleting changes the number of pages potentially avail while scrolling, we could miss
+        # documents (eventual consistency)
 
         # counts deleted docs, bulk() doesn't return that info, trying our best
         # here, a batch may fail half-way through, so not super reliable in case of errors
         deleted = 0
-        for index_name,ids in per_indices.items():
+        for index_name, ids in per_indices.items():
             client = self.get_client_for_index(index_name)
             count = len(ids)
-            client.bulk(ids,op="delete")
+            client.bulk(ids, op="delete")
             deleted += count
 
         return deleted
