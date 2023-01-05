@@ -675,6 +675,21 @@ class ElasticManager:
         # from the config (root param, but we only have access to `es` section at this point)
         # + the API itself nevern know its own name {api_name}. So we'll analyze the active
         # indices (from `es`) to determine the final prefix {api_name}-{env}-{alias}-*
+        if len(self.active_indices) == 1:
+            # no common prefix to determine, we'll just assume the last part is a timestamp
+            # and remove it to obtain the prefix directly
+            parts = self.active_indices[0].split("-")
+            if len(parts) == 4:  # w/ a timestamp
+                try:
+                    int(parts[-1])
+                    return "-".join(parts[:-2])
+                except ValueError:
+                    logging.error(f"Expected a YYYYMMDD[HHmmss] timestamp for Last index name part, got: {parts[-1]}")
+                    raise
+            else:
+                logging.info("Active index {self.active_indices} doesn't include a timestamp")
+                return self.active_indices[0]
+
         common = os.path.commonprefix(self.active_indices)
         if not common:
             return None
@@ -718,14 +733,14 @@ class ElasticManager:
                 "settings": index_def["settings"]["index"],
             }
             active = index_name in self.active_indices
-            parts = index_name.replace(prefix,"").split("-")[1:]  # remove empty leading "-", from eg. "-v3-20220303"
-            parts.pop()  # timestamp, we don't care
-            # the rest is the alias (but it can contain "-" that's why we proceed that way by popping timestamp first)
-            alias = "-".join(parts)
-            if active:
-                results["indices"]["active"][alias] = result
-            else:
-                results["indices"]["inactive"].setdefault(alias,[]).append(result)
+            alias = [alias for alias,ecl in self.clients.items() if ecl.index_name == index_name]
+            if alias:
+                assert len(alias) == 1, f"Can't obtain ES client managing index {index_name!r}"
+                alias = alias.pop()
+                if active:
+                    results["indices"]["active"][alias] = result
+                else:
+                    results["indices"]["inactive"].setdefault(alias,[]).append(result)
         # sort inactive, newer to older
         for alias in results["indices"]["inactive"]:
             results["indices"]["inactive"][alias].sort(key=lambda e: int(e["settings"]["creation_date"]),reverse=True)
