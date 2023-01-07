@@ -20,4 +20,19 @@ from the API. These clients are close to the business so they can evolve quickly
 requirements. When metadata needs to evolve, business users, who are the most knowledgable for specifying metadata,
 create or update JSON schemas and submit them to the ArtifactDB instance, through this conversion step.
 
+## Constraints
 
+In the current implementation, a field `path` must be present in each metadata document, thus at the root ant schema. It
+represents the underlying data file path, within a project and version directories. This `path` field is mandatory as it
+is used to build the file identifier, aka. [identifiers](ArtifactDB ID).
+
+Note: if a metadata file doesn't reference a data file per se, the `path` must still be present. Its value is by
+convention the path of the JSON metadata file itself.
+
+The content of the schema, ie. metadata structure, can be anything, limited to the depth imposed by Elasticsearch and
+its configuration, and/or the total numbe of indexed fields. This is usually not an issue, reaching these limits would
+be an extreme case. Finally, the keys found at the root of the schema must not start with the character `_` (reserved
+either by the ArtifactDB framework itself, eg. `_extra`, or Elasticsearch, eg. `_id`)
+
+
+TODO: examples

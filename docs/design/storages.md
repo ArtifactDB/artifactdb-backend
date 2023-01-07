@@ -122,7 +122,7 @@ Each storage must declare:
   - `delete_stale_projects_older_than`: clean failed (stale) uploaded project (no properly completed, marked as
     "to-be-deleted"), after a certain amount of time (eg. "in 2 weeks", meaning all stale projects older than two weeks
     will be purged). The value must be parsable by the python library
-    [dataparser](https://dateparser.readthedocs.io/en/latest/).
+    [dateparser](https://dateparser.readthedocs.io/en/latest/).
   - `bucket_versioning`: ternary value
     - `null` (default): the bucket versioning configuration is left intact
     - `true`: bucket versioning is enabled
