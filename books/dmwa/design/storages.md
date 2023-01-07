@@ -1,0 +1,1 @@
+../../../docs/design/storages.md
