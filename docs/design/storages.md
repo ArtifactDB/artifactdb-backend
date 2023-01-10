@@ -28,7 +28,7 @@ version (`VER0009`)
 ```
 /PRJ00001/VER0001
 /PRJ00001/VER0002
-/PRJ00002/VER0001
+/PRJ00003/VER0009
 ```
 
 This contrived example illustrates different aspects:

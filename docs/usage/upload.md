@@ -242,7 +242,7 @@ $ curl "https://myinstance.mycompany.com/jobs/f31a86b5-1d63-4f0c-a035-8ebd0abc68
 }
 ```
 
-It's a `SUCCESS`, we can our project has been integrated, and one file has indexed (the metadata).
+It's a `SUCCESS`, we can see our project has been integrated, and one file has indexed (the metadata).
 
 Since the project is public, we can easily retrieve metadata for instance, without any token:
 
@@ -506,6 +506,7 @@ The first way to create links is to explicitly specify that a given filename (ie
 [ArtifactDB ID](../concepts/ids). On the previous example, assuming we create a new version 2 where we know (as the
 client) that the data file `RES000041637_1_MAE.hdf5` didn't change, we could instruct the API to link that file as such:
 
+```
 $ curl -XPOST https://myinstance.mycompany.com/projects/PRJ000001/upload \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $token" \
@@ -523,6 +524,7 @@ $ curl -XPOST https://myinstance.mycompany.com/projects/PRJ000001/upload \
         ],
         "completed_by": "in 5 minutes"
     }'
+```
 
 Note the list `filenames` now contains not only a string representing the metadata file, but also a dictionary structure
 describing the link instructions, with the following keys:

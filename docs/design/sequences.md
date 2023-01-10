@@ -15,7 +15,7 @@ communicated by the client.
 
 When this component is enabled, a `artifactdb.backend.components.sequences.SequenceManager` is created and attached to
 the backend manager. This manager holds one or more `artifactdb.backend.components.sequences.SequenceClient` responsible
-to provision project identifiers, and for each, unique versions, in a transational way. The underlying implementation
+to provision project identifiers, and for each, unique versions, in a transactional way. The underlying implementation
 involves a SQL database and a sequence (if Postgres), so the name. The library `sqlalchemy` is used for the SQL database
 operations. A sequence for a project ID is usually defined as a project prefix (eg. `PRJ`, `DS`, etc...), while the
 version is based on on incremented integer, per project.
@@ -41,7 +41,7 @@ TODO: link to "Maintenance mode"
 Pools declare intervals to contrain project identifiers values. They come in two different flavors:
 
 - *provisioned pool*: declares an inclusive interval within which a project ID will be provisioned. There can be only
-  active provisioned pool, if a new provisioned pool is created, the previous one will set to `inactive`.
+  one active provisioned pool, if a new provisioned pool is created, the previous one will set to `inactive`.
 - *restricted pool*: declares an inclusive interval within which a project ID is *not* allowed to be provisioned. There
   can be multiple restricted pools at a time.
 
