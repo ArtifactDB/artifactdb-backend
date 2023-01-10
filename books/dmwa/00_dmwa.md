@@ -141,6 +141,10 @@ TODO: REST API and admin shell
 
 \pagebreak
 
+!include`incrementSection=1` ../../docs/design/deploy.md
+
+\pagebreak
+
 
 # Conclusion
 
