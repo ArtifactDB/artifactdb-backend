@@ -81,6 +81,10 @@ TODO: REST API and admin shell
 
 \pagebreak
 
+!include`incrementSection=1` ../../docs/usage/admin.md
+
+\pagebreak
+
 
 
 # Design
@@ -142,6 +146,10 @@ TODO: REST API and admin shell
 \pagebreak
 
 !include`incrementSection=1` ../../docs/design/deploy.md
+
+\pagebreak
+
+!include`incrementSection=1` ../../docs/design/admin.md
 
 \pagebreak
 
