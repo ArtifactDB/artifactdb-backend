@@ -45,14 +45,13 @@ class InfoResource(ResourceBase):
                 }
             }
             # project prefixes
-            for seq in cfg.sequence:
-                results["sequences"].append({
-                    "prefix": seq["project_prefix"],
-                    "default": seq.get("default",False),
-                    "test": seq.get("test") or seq["project_prefix"].startswith("test-"),
-                })
-
-
+            if hasattr(cfg, "sequence"):
+                for seq in cfg.sequence:
+                    results["sequences"].append({
+                        "prefix": seq["project_prefix"],
+                        "default": seq.get("default",False),
+                        "test": seq.get("test") or seq["project_prefix"].startswith("test-"),
+                    })
 
             return results
 
