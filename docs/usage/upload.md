@@ -1,4 +1,4 @@
-# Upload artifacts
+# Uploading artifacts
 
 This section describes how to upload artifacts, ie. data and metadata files, to and ArtifactDB API. This is a multi-step
 process, during which the [project](../concepts/project) enters different [states](../concepts/lifecycle).
