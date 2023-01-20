@@ -166,9 +166,9 @@ class ElasticManager:
             self._index_name = self.cfg.multi_index_search_pattern
         else:
             # combine index names to perform multi-index search
-            all_index_names = [client.index_name for client in self.clients.values()]
-            self._index_name = ",".join(all_index_names)
-        logging.info("Search will be performed on '%s'" % self.index_name)
+            all_index_names = [client.index_name for client in self.clients.values() if client.index_name]
+            self._index_name = ",".join(all_index_names) or None
+        logging.info(f"Search will be performed on {self.index_name!r}")
 
         # keep track of field containing a sub-type (text => keyword)
         self.resolved_fields = {}
