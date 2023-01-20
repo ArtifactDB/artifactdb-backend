@@ -41,7 +41,8 @@ class InfoResource(ResourceBase):
                     "clients": {
                         "main": cfg.auth.oidc.client_id,
                         "others": others,
-                    }
+                    },
+                    "well-known": cfg.auth.oidc.well_known.to_dict(),
                 }
             }
             # project prefixes
