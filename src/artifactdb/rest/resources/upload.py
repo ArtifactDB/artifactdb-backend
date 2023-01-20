@@ -21,7 +21,7 @@ from artifactdb.utils.misc import get_root_url, dateparse
 from artifactdb.backend.components.locks import ProjectLockedError
 from artifactdb.backend.components.storages import InvalidLinkError
 from artifactdb.utils.context import storage_default_client_context
-from artifactdb.rest.helpers import get_sts_credentials, open_log_request
+from artifactdb.rest.helpers import get_sts_credentials, open_log_request, STSCredentialsError
 from artifactdb.db.elastic.manager import NotFoundError
 
 
@@ -386,6 +386,12 @@ class UploadResource(ResourceBase):
                     status_code=423,
                     status="error",
                     reason="Project '{}' is locked: {}".format(project_id, lock_info))
+
+            except STSCredentialsError as e:
+                raise APIErrorException(
+                    status_code=501,
+                    status="error",
+                    reason=f"Unable to obtain STS credentials, not supported: {e}")
 
             except Exception as e:
                 logging.exception("Error while processing upload request for project_id {}: {}".format(project_id, e))

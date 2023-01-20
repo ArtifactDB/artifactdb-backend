@@ -12,6 +12,10 @@ from artifactdb.rest.resources import APIErrorException, PrettyJSONResponse, Ela
                                  SubmittedJob
 
 
+class STSCredentialsError(Exception):
+    pass
+
+
 def fetch_project_metadata(project_id, version, es, legacy=False):
     try:
         rawresults = es.search_by_project_id(project_id, version)
@@ -184,12 +188,17 @@ async def get_sts_credentials(manager, project_id, version, ttl=None, mode="read
     # ARN with wildcards: allows upload to anything under project/version
     arn = manager.s3.get_s3_arn(manager.s3.bucket_name,project_id,version,"*")
     resources = [{"arn": arn, "mode": mode}]
-    token = await manager.keycloak.get_access_token()
-    sts = await manager.almighty.generate_sts_credentials(token,resources,ttl=ttl)
+    try:
+        token = await manager.keycloak.get_access_token()
+    except Exception as exc:
+        raise STSCredentialsError(f"Unable to obtain service account token: {exc}")
+    try:
+        sts = await manager.almighty.generate_sts_credentials(token,resources,ttl=ttl)
+    except Exception as exc:
+        raise STSCredentialsError(f"Unable to obtain STS crdentials from provider: {exc}")
     # add bucket name and s3 prefix, convenient on client side
     sts["bucket"] = manager.s3.bucket_name
     sts["prefix"] = f"{project_id}/{version}/"
-
     return sts
 
 async def open_log_request(celery_app, project_id, version=None, subject="", close_when=None, attrs_when_closed=None, use_schema=True):
