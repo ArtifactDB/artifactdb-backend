@@ -101,12 +101,18 @@ class PluginsManager(BackendComponent):
 
     def post_manager_init(self):
         logging.info(f"Initializing plugins repos ({self.__class__} post-manager-init)")
-        repos_cfg = self.cfg.celery.get('repo',[])
-        self.git_mgr.get_repos(repos_cfg, pull=True)
+        try: 
+            repos_cfg = self.cfg.celery.get('repo',[])
+            self.git_mgr.get_repos(repos_cfg, pull=True)
+        except Exception as err: # pylint: disable=broad-except # catching all exceptions for registration of plugin task
+            logging.exception(f"Exception for post_manager_init plugins hook: {err}")
 
     def post_tasks_init(self):
         logging.info(f"Registering tasks from plugins repos ({self.__class__} post-tasks-init)")
-        self.register_repository_tasks_safe(pull=True)
+        try:
+            self.register_repository_tasks_safe(pull=True)
+        except Exception as err: # pylint: disable=broad-except # catching all exceptions for registration of plugin task
+            logging.exception(f"Exception for post_tasks_init plugins hook: {err}")
 
 
 #########
