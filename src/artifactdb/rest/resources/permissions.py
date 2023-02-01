@@ -66,7 +66,7 @@ class PermissionsResource(ResourceBase):
                 # it means the ES query didn't find the user as owners/viewers, which means
                 # permissions on S3 are desync with those in the index
                 raise APIErrorException(404,status="error",reason="No such project_id/version (or revision). " + \
-                        f"Check /projects/{project_id}/version/{version}/info" + \
+                        f"Check /projects/{project_id}/version/{version}/info " + \
                         "for permissions anomalies")
             pobj = None
             try:
