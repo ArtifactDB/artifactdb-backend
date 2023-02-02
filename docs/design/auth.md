@@ -52,7 +52,7 @@ that the value is the same than the one it previously set, before resetting the 
 end ensures there was no accidental manipulation of the context itself during the request, as well as ensure the next
 request starts from a fresh, empty context.
 
-This user object contains information such as her `unixID` (taken from `preferred_username`), the resource she's trying
+This user object contains information such as her login/username (taken from `preferred_username`), the resource she's trying
 to access (the path), the roles if any, the raw and parsed JWT token. Optionally, the middleware can enrich distribution
 lists and Active Directory groups membership, if such information providers are declared in the configuration.
 
@@ -63,7 +63,6 @@ type (anonymous, authenticated, admin) to adjust the permission-based filtering 
 only publicly readble projects for anonymous users).
 
 [^1]: https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-bearer-19#page-5
-
 
 ## "IKYS" API key based authentication
 

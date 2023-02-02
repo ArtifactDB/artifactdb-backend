@@ -113,6 +113,10 @@ TODO: REST API and admin shell
 
 \pagebreak
 
+!include`incrementSection=1` ../../docs/design/permissions.md
+
+\pagebreak
+
 !include`incrementSection=1` ../../docs/design/backend.md
 
 \pagebreak
