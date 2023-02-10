@@ -17,7 +17,7 @@ class GitManager:
         fetch_tab = []
         for r_cfg in repos_cfg:
             repo_dir = self._get_repo_path(r_cfg)
-            fetch_info = self._open_repo(repo_dir)['fetch']
+            fetch_info = self._open_repo(repo_dir, r_cfg)['fetch']
             fetch_tab.append(fetch_info)
 
         return fetch_tab
@@ -28,13 +28,14 @@ class GitManager:
 
         return f"{plugins_path}/{repo_name}"
 
-    def _open_repo(self, repo_dir, pull = True):
+    def _open_repo(self, repo_dir, repo_cfg, pull = True):
         fetch = None
         try:
             repo = Repo(repo_dir)
             try:
                 if pull:
                     fetch = repo.remotes.origin.pull()[0]
+                    logging.info("Git repos `{}` pulled sucessfully!".format(repo_cfg['url']))
             except GitCommandError as exc:
                 logging.exception(f"Repository not pulled because of exception: {exc}")
         except InvalidGitRepositoryError:
@@ -78,13 +79,15 @@ class GitManager:
     def get_plugin_repo(self, repo_cfg, pull):
         repo_dir = self._get_repo_path(repo_cfg)
         if os.path.isdir(repo_dir):
-            repo = self._open_repo(repo_dir, pull)['repo']
+            repo = self._open_repo(repo_dir, repo_cfg, pull)['repo']
             if not repo:
                 os.rmdir(repo_dir)
                 logging.info(f"Directory: '{repo_dir}' has been removed.")
                 repo = self._clone_repo(repo_cfg['url'], repo_dir, repo_cfg.get('branch'))
+                logging.info("Git repos `{}` cloned sucessfully!".format(repo_cfg['url']))
         else:
             repo = self._clone_repo(repo_cfg['url'], repo_dir, repo_cfg.get('branch'))
+            logging.info("Git repos `{}` cloned sucessfully!".format(repo_cfg['url']))
 
         return repo_dir
 
