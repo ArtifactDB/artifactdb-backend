@@ -15,7 +15,7 @@ def is_plugin(task_def):
     Returns False if plugins are not defined in the ArtifactDB instance."""
     if "PLUGINS_PATH" not in os.environ:
         return False
-        
+
     plugins_path = os.environ["PLUGINS_PATH"]
     return task_def['callable'].startswith(plugins_path)
 

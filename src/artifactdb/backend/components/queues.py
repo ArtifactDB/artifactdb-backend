@@ -44,7 +44,7 @@ class QueuesManager:
         Enable max. priority if `queues` is defined in the configuration.
         Otherwise, there's no specific priority range.
         """
-        return MAX_TASK_PRIORITY if self.cfg.get('queues') else None
+        return MAX_TASK_PRIORITY if self.cfg.queues else None
 
     @property
     def default_priority(self):
@@ -52,14 +52,14 @@ class QueuesManager:
         Enable default priority if `queues` is defined in the configuration.
         Otherwise, there's no specific priority range.
         """
-        return DEFAULT_TASK_PRIORITY if self.cfg.get('queues') else None
+        return DEFAULT_TASK_PRIORITY if self.cfg.queues else None
 
     def prepare_queues(self):
         """
         This method needs to be called once the Celery app is created,
         so the queue manager can access Celery config
         """
-        q_settings = self.cfg.get('queues')
+        q_settings = self.cfg.queues
         if q_settings:
             logging.info(f"Applying queue settings: {q_settings}")
             self.check_settings(q_settings)

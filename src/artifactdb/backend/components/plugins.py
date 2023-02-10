@@ -25,7 +25,7 @@ class PluginsManager(BackendComponent):
         self.cfg = cfg
         # first sanity checks, raising InvalidComponentError is anything wrong,
         # per artifactdb.backend.BackendComponent ABC class.
-        store = self.cfg.celery.get("tasks_store")
+        store = self.cfg.celery.tasks_store
         plugins_path = os.environ.get("PLUGINS_PATH")
         if not store:
             raise InvalidComponentError("Can't use plugins without `celery.tasks_store` defined in configuration")
@@ -55,7 +55,7 @@ class PluginsManager(BackendComponent):
 
     def register_repository_tasks(self, pull):
         """It register all task repositories."""
-        repos_cfg = self.cfg.celery.get('repo')
+        repos_cfg = self.cfg.celery.repo
         if repos_cfg:
             self.register_tasks_from_repos(repos_cfg, pull)
 
@@ -101,8 +101,8 @@ class PluginsManager(BackendComponent):
 
     def post_manager_init(self):
         logging.info(f"Initializing plugins repos ({self.__class__} post-manager-init)")
-        try: 
-            repos_cfg = self.cfg.celery.get('repo',[])
+        try:
+            repos_cfg = self.cfg.celery.repo
             self.git_mgr.get_repos(repos_cfg, pull=True)
         except Exception as err: # pylint: disable=broad-except # catching all exceptions for registration of plugin task
             logging.exception(f"Exception for post_manager_init plugins hook: {err}")
@@ -132,7 +132,7 @@ def pull_plugin_repos(self):
 
     git_mgr = GitManager()
     cfg = self._app.manager.cfg
-    repos_cfg = cfg.celery.get('repo')
+    repos_cfg = cfg.celery.repo
 
     if repos_cfg:
         fetch_tab = git_mgr.pull_repos(repos_cfg)

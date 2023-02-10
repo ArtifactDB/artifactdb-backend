@@ -16,7 +16,7 @@ def get_cache(cfg):
         raise CacheError("Cache configuration error, 'type' and/or 'params' must be under key 'backend'")
 
     cache_cfg = {
-        "cache_ttl": cfg["cache_ttl"]
+        "cache_ttl": cfg["cache_ttl"] if "cache_ttl" in cfg else None
     }
 
     if "backend" in cfg:

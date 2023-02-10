@@ -1,13 +1,13 @@
 import logging
-
 from celery import Celery
 
 from artifactdb.utils.context import auth_user_context
 from artifactdb.rest.auth import backend_user
-from .tasks.pubsub import publish_all_indexed_failed, publish_all_indexed
-from .tasks.core import index, index_all, purge_not_completed, cancel_task, \
+from artifactdb.backend.tasks.pubsub import publish_all_indexed_failed, publish_all_indexed
+from artifactdb.backend.tasks.core import index, index_all, purge_not_completed, cancel_task, \
                         purge_expired,clean_stale_projects, \
                         harakiri, create_snapshot, generate_models
+from artifactdb.backend.tasks import log_task
 
 
 class BackendQueue(Celery):
@@ -22,7 +22,6 @@ class BackendQueue(Celery):
         if hasattr(self.cfg, "celery"):
             self.config_from_object(self.cfg.celery)
 
-
     def cancel(self, task_id):
         return self.control.revoke(task_id)
 
@@ -34,7 +33,7 @@ class BackendQueue(Celery):
         # special root user pushed to context so Celery can access all the data
         auth_user_context.set(backend_user)
 
-    def task(self, *args, **kwargs):
+    def task(self, *args, **opts):
         """
         Register task and remember the task priorities. Registering task is done with Celery 'task' method.
         Priorities are stored in memory and used when the task is sent (see 'send_task').
@@ -42,14 +41,21 @@ class BackendQueue(Celery):
         where the priority have to be defined in 'send_task' method.
         If priority parameter is None it uses default value for priority.
         """
-        task_name = kwargs['name']
+        task_name = opts['name']
         # for backward compatibility with older instances without QueuesManager:
         has_queues_mgr = hasattr(self.manager, "queues")
         default_priority = has_queues_mgr and self.manager.queues.default_priority
-        priority = kwargs.get('priority', default_priority)
+        priority = opts.get('priority', default_priority)
         self.task_priorities[task_name] = priority
         logging.info(f"Task '{task_name}' was registered with priority: {priority}.")
-        return super().task(*args, **kwargs)
+
+        # Decorating function with `log_task()` to log every Celery task
+        if len(args) > 0:
+            update_logs_func = self.manager.tasks.cached_task_logs.update_logs
+            logged_function = log_task(update_logs_func, task_name)(args[0])
+            args = (logged_function, *args[1:])
+
+        return super().task(*args, **opts)
 
     def send_task(self, task_name, *args, **kwargs):
         """

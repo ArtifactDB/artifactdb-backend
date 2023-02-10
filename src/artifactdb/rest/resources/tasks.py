@@ -1,3 +1,4 @@
+# pylint: disable=unused-argument  # `auth` parameter for authorization
 """Definition of API endpoints for tasks: plugin and core."""
 from typing import Dict
 from fastapi import Depends, Request
@@ -87,3 +88,36 @@ class TasksResource(ResourceBase):
             res = celery_app.send_task(task_name, kwargs=task_params.params)
             resp = get_job_response(res.id, request)
             return resp
+
+
+        #############
+        # CALL LOGS #
+        #############
+
+        @cls.router.get("/tasks/logs",
+                    description="Returns last logs for all Celery tasks.",
+                    tags=["tasks"])
+        def tasks_logs(
+            tasks=Depends(cls.deps.get_tasks),
+            _: str = Depends(cls.deps.get_authorizer(roles=["admin"], access_rules=[])),
+            auth: str = Depends(cls.deps.get_authorizer())
+        ):
+            if tasks and tasks.cached_task_logs:
+                return tasks.cached_task_logs.get_logs()
+            else:
+                raise APIErrorException(501, status="error", reason="Task logs component not enabled.")
+
+
+        @cls.router.put("/task/logs/reset",
+                        description="Reset the tasks log storage.",
+                        tags=["tasks"])
+        def tasks_logs_reset(
+            tasks=Depends(cls.deps.get_tasks),
+            _: str = Depends(cls.deps.get_authorizer(roles=["admin"], access_rules=[])),
+            auth: str = Depends(cls.deps.get_authorizer())
+        ):
+            if tasks and tasks.cached_task_logs:
+                tasks.cached_task_logs.reset()
+                return {}
+            else:
+                raise APIErrorException(501, status="error", reason="Task logs component not enabled.")

@@ -3,6 +3,7 @@ import copy
 import logging
 import logging.config
 
+from typing import Optional
 from aumbry import Attr
 
 import artifactdb
@@ -122,6 +123,45 @@ class ConfigBase(PrintableYamlConfig):
         logging.getLogger("amqp").setLevel(logging.ERROR)
 
 
+############################
+# Task store configuration #
+############################
+
+class TasksStoreConfig(PrintableYamlConfig):
+    __mapping__ = {
+        'backend': Attr('backend', dict),
+        'cache_ttl': Attr('cache_ttl', Optional[int]),
+        'key': Attr('key', list),
+    }
+    backend = {}
+    cache_ttl = 43200 # 12 hours
+    key = ""
+
+
+########################
+# Celery configuration #
+########################
+
+class CeleryConfig(PrintableYamlConfig):
+    __mapping__ = {
+        'broker_url': Attr('broker_url', str),
+        'queues': Attr('queues', list),
+        'repo': Attr('repo', list),
+        'result_backend': Attr('result_backend', str),
+        'tasks': Attr('tasks', dict),
+        'tasks_store': Attr('tasks_store', TasksStoreConfig),
+        'tasks_logs_count': Attr('tasks_logs_count', int)
+    }
+
+    broker_url = None
+    queues = []
+    repo = []
+    result_backend = None
+    tasks = {}
+    tasks_store = {}
+    tasks_logs_count = 10
+
+
 #####################################
 # ArtifactDB-specific configuration #
 #####################################
@@ -147,7 +187,7 @@ class ArtifactDBConfigBase(ConfigBase):
         'sequence': Attr('sequence',list),
         's3_inventory':Attr('s3_inventory',S3InventoryConfig),
         'gprn': Attr('gprn', GPRNConfig),
-        'celery': Attr('celery', dict),
+        'celery': Attr('celery', CeleryConfig),
         'inspectors': Attr('inspectors',list),
     }
 
