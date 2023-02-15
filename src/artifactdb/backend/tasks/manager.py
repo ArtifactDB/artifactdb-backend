@@ -3,6 +3,7 @@ import logging
 import json
 import copy
 from datetime import datetime
+from builtins import Exception
 
 from artifactdb.utils.misc import get_callable_from_path, get_callable_info
 from artifactdb.backend.tasks.staged import StagedTasks
@@ -118,7 +119,7 @@ class CachedTasksInfo:
     def _update_cache_key(self, key, **stored_dict):
         gprn = generate(
                 {"environment": self.cfg_gprn.environment, "service": self.cfg_gprn.service})
-        
+
         stored = {
             "updated": str(datetime.now().astimezone()),
             "gprn": gprn
@@ -136,13 +137,13 @@ class CachedTasksInfo:
         if self.cache:
             # plugin tasks info updating
             self._update_cache_key(
-                self._get_plugin_key(), 
+                self._get_plugin_key(),
                 repositories=self.registered_tasks.plugin_tasks
             )
 
             # core tasks info updating
             self._update_cache_key(
-                self._get_tasks_key(), 
+                self._get_tasks_key(),
                 tasks=self.registered_tasks.get_all_tasks()
             )
 
