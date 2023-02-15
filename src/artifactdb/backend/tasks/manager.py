@@ -114,31 +114,46 @@ class CachedTasksInfo:
         """Get cache key for all registered tasks."""
         return self.store.key + ":tasks"
 
+
+    def _update_cache_key(self, key, **stored_dict):
+        gprn = generate(
+                {"environment": self.cfg_gprn.environment, "service": self.cfg_gprn.service})
+        
+        stored = {
+            "updated": str(datetime.now().astimezone()),
+            "gprn": gprn
+        }
+        stored.update(stored_dict)
+
+        self.cache.set(
+            key,
+            json.dumps(stored),
+            self.cache.cache_ttl)
+
+
     def update(self):
         """It updates cache variable with registered tasks."""
         if self.cache:
-            gprn = generate(
-                {"environment": self.cfg_gprn.environment, "service": self.cfg_gprn.service})
+            # plugin tasks info updating
+            self._update_cache_key(
+                self._get_plugin_key(), 
+                repositories=self.registered_tasks.plugin_tasks
+            )
 
-            plugin_val = {
-                "updated": str(datetime.now().astimezone()),
-                "gprn": gprn,
-                "repositories": self.registered_tasks.plugin_tasks
-            }
-
-            self.cache.set(
-                self._get_plugin_key(),
-                json.dumps(plugin_val),
-                self.cache.cache_ttl)
+            # core tasks info updating
+            self._update_cache_key(
+                self._get_tasks_key(), 
+                tasks=self.registered_tasks.get_all_tasks()
+            )
 
 
     def get_plugin_tasks(self):
         """Function gets all registered tasks. It gets them from cache."""
-        return json.loads(self.cache.get(self._get_plugin_key()))
+        return json.loads(self.cache.get(self._get_plugin_key()) or "{}")
 
     def get_tasks(self):
         """Function gets all registered tasks. It gets them from cache."""
-        return json.loads(self.cache.get(self._get_tasks_key()))
+        return json.loads(self.cache.get(self._get_tasks_key()) or "{}")
 
 
 class TaskManager:

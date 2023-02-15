@@ -105,7 +105,8 @@ class TasksResource(ResourceBase):
             if tasks and tasks.cached_task_logs:
                 return tasks.cached_task_logs.get_logs()
             else:
-                raise APIErrorException(501, status="error", reason="Task logs component not enabled.")
+                error_msg = "Unable to return tasks logs, this feature is not enabled or properly configured."
+                raise APIErrorException(501, status="error", reason=error_msg)
 
 
         @cls.router.put("/task/logs/reset",

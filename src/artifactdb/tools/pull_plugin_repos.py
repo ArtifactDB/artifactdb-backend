@@ -4,10 +4,8 @@ from artifactdb.backend.git import GitManager
 
 def pull_plugin_repos():
     cfg = get_config()
-    repos_cfg = cfg.celery.get('repo', [])
     git_mgr = GitManager()
-    repos_cfg = cfg.celery.get('repo', [])
-    git_mgr.get_repos(repos_cfg, pull=True)
+    git_mgr.get_repos(cfg.celery.repo, pull=True)
 
 if __name__ == "__main__":
     pull_plugin_repos()
