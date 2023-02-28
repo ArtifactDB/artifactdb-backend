@@ -76,10 +76,15 @@ class StorageManager(BackendComponent):
 class S3Client:
 
     def __init__(self, s3_cfg):
-        params = dict(
-            aws_access_key_id=s3_cfg.credentials.access_key,
-            aws_secret_access_key=s3_cfg.credentials.secret_key,
-        )
+        if s3_cfg.credentials.access_key:
+            assert s3_cfg.credentials.secret_key, "Storage declares access key but no secret keys"
+            params = dict(
+                aws_access_key_id=s3_cfg.credentials.access_key,
+                aws_secret_access_key=s3_cfg.credentials.secret_key,
+            )
+        else:
+            # assuming accessing the storage relies on roles, not a dedicated IAM user
+            params = {}
         if s3_cfg.endpoint:
             params["endpoint_url"] = s3_cfg.endpoint
         if s3_cfg.region:
