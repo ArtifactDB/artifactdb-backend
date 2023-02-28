@@ -3,7 +3,6 @@ import logging
 import json
 import copy
 from datetime import datetime
-from builtins import Exception
 
 from artifactdb.utils.misc import get_callable_from_path, get_callable_info
 from artifactdb.backend.tasks.staged import StagedTasks
@@ -67,35 +66,46 @@ class CachedTasksLogs:
         return self.store.key + ":task:info"
 
     def update_logs(self, task_name, logs):
-        if self.cache:
-            tasks_logs = self.get_logs()
+        tasks_logs = self.get_logs()
 
-            if task_name not in tasks_logs:
-                tasks_logs[task_name] = []
+        if task_name not in tasks_logs:
+            tasks_logs[task_name] = []
 
-            tasks_logs[task_name].append({
-                "time": str(datetime.now().astimezone()),
-                "logs": logs.split("\n")
-            })
+        tasks_logs[task_name].append({
+            "time": str(datetime.now().astimezone()),
+            "logs": logs.split("\n")
+        })
 
-            if len(tasks_logs[task_name]) > self.logs_count:
-                tasks_logs[task_name].pop(0)
+        if len(tasks_logs[task_name]) > self.logs_count:
+            tasks_logs[task_name].pop(0)
 
-            self.cache.set(
-                self._get_task_info_key(),
-                json.dumps(tasks_logs),
-                self.cache.cache_ttl)
+        self.cache.set(
+            self._get_task_info_key(),
+            json.dumps(tasks_logs),
+            self.cache.cache_ttl)
 
     def reset(self):
-        if self.cache:
-            self.cache.set(
-                self._get_task_info_key(),
-                "{}",
-                self.cache.cache_ttl)
+        self.cache.set(
+            self._get_task_info_key(),
+            "{}",
+            self.cache.cache_ttl)
 
     def get_logs(self):
         """Function gets logs for called Celery tasks. It gets them from cache."""
         return json.loads(self.cache.get(self._get_task_info_key()) or "{}")
+
+
+class DummyCachedTasksLogs:
+    """Mimic CachedTasksLogs interface in case no log store is declared"""
+
+    def update_logs(self, task_name, logs):
+        return
+
+    def reset(self):
+        return
+
+    def get_logs(self):
+        return "{}"
 
 
 class CachedTasksInfo:
@@ -115,7 +125,6 @@ class CachedTasksInfo:
         """Get cache key for all registered tasks."""
         return self.store.key + ":tasks"
 
-
     def _update_cache_key(self, key, **stored_dict):
         gprn = generate(
                 {"environment": self.cfg_gprn.environment, "service": self.cfg_gprn.service})
@@ -131,22 +140,19 @@ class CachedTasksInfo:
             json.dumps(stored),
             self.cache.cache_ttl)
 
-
     def update(self):
         """It updates cache variable with registered tasks."""
-        if self.cache:
-            # plugin tasks info updating
-            self._update_cache_key(
-                self._get_plugin_key(),
-                repositories=self.registered_tasks.plugin_tasks
-            )
+        # plugin tasks info updating
+        self._update_cache_key(
+            self._get_plugin_key(),
+            repositories=self.registered_tasks.plugin_tasks
+        )
 
-            # core tasks info updating
-            self._update_cache_key(
-                self._get_tasks_key(),
-                tasks=self.registered_tasks.get_all_tasks()
-            )
-
+        # core tasks info updating
+        self._update_cache_key(
+            self._get_tasks_key(),
+            tasks=self.registered_tasks.get_all_tasks()
+        )
 
     def get_plugin_tasks(self):
         """Function gets all registered tasks. It gets them from cache."""
@@ -155,6 +161,19 @@ class CachedTasksInfo:
     def get_tasks(self):
         """Function gets all registered tasks. It gets them from cache."""
         return json.loads(self.cache.get(self._get_tasks_key()) or "{}")
+
+
+class DummyCachedTasksInfo:
+    """Mimic CachedTasksInfo interface in case no log store is declared"""
+
+    def update(self):
+        return
+
+    def get_plugin_tasks(self):
+        return "{}"
+
+    def get_tasks(self):
+        return "{}"
 
 
 class TaskManager:
@@ -176,13 +195,15 @@ class TaskManager:
         self.staged_tasks = settings.get("staged_tasks", StagedTasks(celery_app))
         self.registered_tasks = RegisteredTasks()
 
-        cfg_store = self.cfg.celery.tasks_store
-        self.cached_tasks_info = None
-        self.cached_task_logs = None
-        if cfg_store:
+        self.tasks_store_cfg = self.cfg.celery.tasks_store
+        if self.tasks_store_cfg:
             cfg_gprn = self.cfg.gprn
-            self.cached_tasks_info = CachedTasksInfo(cfg_store, cfg_gprn, self.registered_tasks)
-            self.cached_task_logs = CachedTasksLogs(cfg_store, self.cfg.celery.tasks_logs_count)
+            self.cached_tasks_info = CachedTasksInfo(self.tasks_store_cfg, cfg_gprn, self.registered_tasks)
+            self.cached_task_logs = CachedTasksLogs(self.tasks_store_cfg, self.cfg.celery.tasks_logs_count)
+        else:
+            self.cached_tasks_info = DummyCachedTasksInfo()
+            self.cached_task_logs = DummyCachedTasksLogs()
+
 
     def add_callable_info(self, callable_obj, options, task_def, repo_name=None):
         """Method adds info about callable to 'registered_tasks'."""

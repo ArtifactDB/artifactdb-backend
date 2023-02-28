@@ -102,7 +102,7 @@ class TasksResource(ResourceBase):
             _: str = Depends(cls.deps.get_authorizer(roles=["admin"], access_rules=[])),
             auth: str = Depends(cls.deps.get_authorizer())
         ):
-            if tasks and tasks.cached_task_logs:
+            if tasks and tasks.tasks_store_cfg:
                 return tasks.cached_task_logs.get_logs()
             else:
                 error_msg = "Unable to return tasks logs, this feature is not enabled or properly configured."
@@ -117,7 +117,7 @@ class TasksResource(ResourceBase):
             _: str = Depends(cls.deps.get_authorizer(roles=["admin"], access_rules=[])),
             auth: str = Depends(cls.deps.get_authorizer())
         ):
-            if tasks and tasks.cached_task_logs:
+            if tasks and tasks.tasks_store_cfg:
                 tasks.cached_task_logs.reset()
                 return {}
             else:
