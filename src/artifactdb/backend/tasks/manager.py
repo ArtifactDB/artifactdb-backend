@@ -162,6 +162,7 @@ class TaskManager:
 
         cfg_store = self.cfg.celery.tasks_store
         self.cached_tasks_info = None
+        self.cached_task_logs = None
         if cfg_store:
             cfg_gprn = self.cfg.gprn
             self.cached_tasks_info = CachedTasksInfo(cfg_store, cfg_gprn, self.registered_tasks)
