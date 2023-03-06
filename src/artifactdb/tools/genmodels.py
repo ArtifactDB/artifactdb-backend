@@ -7,7 +7,7 @@ from artifactdb.db.elastic.convert import EsModelScript
 
 
 def generate_models(output_file_tpl, clients=None, merge=False):
-    clients = clients or mgr.schema_client.clients
+    clients = clients or mgr.schema_manager.clients
     for client in  clients:
         output_filename = output_file_tpl.format(client.alias.replace("-","_"))
         print(f"Generating models for {client}")
