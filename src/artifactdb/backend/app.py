@@ -49,8 +49,11 @@ class BackendQueue(Celery):
         self.task_priorities[task_name] = priority
         logging.info(f"Task '{task_name}' was registered with priority: {priority}.")
 
-        # Decorating function with `log_task()` to log every Celery task
-        if len(args) > 0:
+        # Decorating function with `log_task()` to log every Celery task.
+        # Stop decorating in two cases:
+        # 1. `args` are empty (case for internal celery call of the `task` method)
+        # 2. there is no tasks manager (e.g.: Atlas)
+        if len(args) > 0 and hasattr(self.manager, "tasks"):
             update_logs_func = self.manager.tasks.cached_task_logs.update_logs
             logged_function = log_task(update_logs_func, task_name)(args[0])
             args = (logged_function, *args[1:])
