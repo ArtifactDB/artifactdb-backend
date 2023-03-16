@@ -232,3 +232,4 @@ def ask_for_restart(self):
 def harakiri(self):  # pylint: disable=unused-argument
     logging.warning("Hariki/Seppuku in progress, workers will reload once running tasks are done")
     os.kill(1,1)
+

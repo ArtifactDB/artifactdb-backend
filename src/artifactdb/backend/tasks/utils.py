@@ -43,6 +43,7 @@ def prepare_plugin_task(name, task, path_to_tasks, **gen_kwargs):
         def repo_task_func_staged(self_obj, **kwargs):
             try:
                 gen_kwargs.update(kwargs)
+                logging.info(f"Task: `{name}` called with arguments: {gen_kwargs}.")
                 return task_callable(self_obj, **gen_kwargs)  # context
             except Exception as e: # pylint: disable=broad-except # catching all exceptions for called plugin task
                 err_msg = f"Plugin task exception during call: {e}"

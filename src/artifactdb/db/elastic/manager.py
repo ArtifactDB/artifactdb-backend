@@ -946,16 +946,18 @@ class ElasticManager:
 
         return response
 
-    def scan(self, q, fields=None):
+    def scan(self, q, fields=None, indices=None):
         """
         Iterate over all documents mathing query 'q'
         Note documents can be fetched from any registered 'clients'
         (multi-index search is used behing the scene).
         """
-        auth_q = authorize_query(q, index_name=self.index_name)
+        indices = indices or self.index_name
+        auth_q = authorize_query(q, index_name=indices)
         if fields:
             auth_q = parse_fields(auth_q, fields)
 
+        logging.info("ES scan for indices: {}".format(str(indices)))
         for doc in auth_q.scan():
             yield doc
 

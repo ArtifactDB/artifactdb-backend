@@ -35,7 +35,7 @@ class GitManager:
             try:
                 if pull:
                     fetch = repo.remotes.origin.pull()[0]
-                    logging.info("Git repos `{}` pulled sucessfully!".format(repo_cfg['url']))
+                    logging.info("Git repo: `{}` pulled sucessfully!".format(repo_cfg['url']))
             except GitCommandError as exc:
                 logging.exception(f"Repository not pulled because of exception: {exc}")
         except InvalidGitRepositoryError:

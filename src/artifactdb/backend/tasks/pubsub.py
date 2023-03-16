@@ -3,7 +3,7 @@ import logging
 from artifactdb.backend.components.locks import RE_INDEXING
 from artifactdb.backend.tasks import task_params
 from artifactdb.backend.managers import RETRYABLE_EXCEPTIONS
-from artifactdb.utils.stages import INDEXED, FAILED
+from artifactdb.utils.stages import INDEXED, FAILED, ALL_INDEXED, ALL_INDEXED_FAILED
 
 
 @task_params(bind=True,name="publish_all_indexed",autoretry_for=RETRYABLE_EXCEPTIONS,default_retry_delay=30)
@@ -17,6 +17,7 @@ def publish_all_indexed(self, projects):
     self._app.manager.lock_manager.release(RE_INDEXING,force=True)
     msg = "Fully redindexed {} project(s): {}".format(len(projects),projects)
     kw = {
+        "project_id": None,
         "message": {
             "message": msg,
             "project_id": None,
@@ -28,6 +29,8 @@ def publish_all_indexed(self, projects):
     logging.info(msg)
     self._app.send_task("publish_event",kwargs=kw)
 
+    self._app.manager.tasks.staged_tasks.call_stage(stage=ALL_INDEXED)
+
 
 @task_params(bind=True,name="publish_all_indexed_failed",autoretry_for=RETRYABLE_EXCEPTIONS,default_retry_delay=30)
 def publish_all_indexed_failed(self, task_id, *args, **kwargs):  # pylint: disable=unused-argument  # celery puts some more we don't care about
@@ -38,6 +41,7 @@ def publish_all_indexed_failed(self, task_id, *args, **kwargs):  # pylint: disab
     self._app.manager.lock_manager.release(RE_INDEXING,force=True)
     msg = "Redindexing error {}".format(task_id)
     kw = {
+        "project_id": None,
         "message": {
             "message": msg,
             "project_id": None,
@@ -49,3 +53,4 @@ def publish_all_indexed_failed(self, task_id, *args, **kwargs):  # pylint: disab
     logging.info(msg)
     self._app.send_task("publish_event",kwargs=kw)
 
+    self._app.manager.tasks.staged_tasks.call_stage(stage=ALL_INDEXED_FAILED)
