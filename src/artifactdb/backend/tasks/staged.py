@@ -47,4 +47,4 @@ class StagedTasks:
 
 
     def get_stages(self, task):
-        return task['scheduler']['args'].get('stages', [])
+        return task.get('scheduler',{}).get('args',{}).get('stages', [])
