@@ -47,4 +47,7 @@ class StagedTasks:
 
 
     def get_stages(self, task):
-        return task.get('scheduler',{}).get('args',{}).get('stages', [])
+        if "scheduler" in task:
+            return task['scheduler']['args'].get('stages', [])
+        else:
+            return []
