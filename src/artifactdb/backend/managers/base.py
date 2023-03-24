@@ -142,7 +142,7 @@ class BackendManagerBase:
         self._post_what("post_final_init")
 
     @classmethod
-    def replace_component(cls, module_name, **component_kwargs):
+    def _get_component_index(cls, module_name):
         found = None
         for (i,_) in enumerate(cls.COMPONENTS):
             if _.get("module") and _["module"].__name__ == module_name:
@@ -150,5 +150,15 @@ class BackendManagerBase:
                 break
         if found is None:
             raise ComponentNotFoundError(module_name)
+
+        return found
+
+    @classmethod
+    def replace_component(cls, module_name, **component_kwargs):
+        found = cls._get_component_index(module_name)
         cls.COMPONENTS[found] = component_kwargs
 
+    @classmethod
+    def remove_component(cls, module_name):
+        found = cls._get_component_index(module_name)
+        cls.COMPONENTS.pop(found)

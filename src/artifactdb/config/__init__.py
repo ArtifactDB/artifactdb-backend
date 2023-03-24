@@ -191,6 +191,7 @@ class ArtifactDBConfigBase(ConfigBase):
         'inspectors': Attr('inspectors',list),
     }
 
+    sequence = []
     inspectors = []
     s3_inventory = None
     permissions = PermissionsConfig()
