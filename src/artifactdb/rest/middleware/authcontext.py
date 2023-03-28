@@ -108,6 +108,9 @@ class AuthContextMiddleware:
         # or anonymous user (will never match any AD info anyways)
         if isinstance(user, (AnonymousUser, RootUser)):
             return []
+        if not self.dist_list_url_template:
+            # no dlist server registered, not supported
+            return []
         if not self.dist_list_cache:
             return await self.get_dist_lists(user)
         else:
