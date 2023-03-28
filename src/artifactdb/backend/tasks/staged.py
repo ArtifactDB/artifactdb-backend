@@ -6,6 +6,8 @@ class StagedTasks:
         self.staged_tasks = []
         self.celery_app = celery_app
 
+    def reset(self):
+        self.staged_tasks.clear()
 
     def has_project_id(self, task, project_id):
         return not task['project_ids'] or (project_id in task['project_ids'])

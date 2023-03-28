@@ -40,7 +40,7 @@ def prepare_plugin_task(name, task, path_to_tasks, **gen_kwargs):
 
         @task_params(bind=True, name=name, autoretry_for=RETRYABLE_EXCEPTIONS, default_retry_delay=30,
                      priority=priority, **task_config_params)
-        def repo_task_func_staged(self_obj, **kwargs):
+        def repo_task_func(self_obj, **kwargs):
             try:
                 gen_kwargs.update(kwargs)
                 logging.info(f"Task: `{name}` called with arguments: {gen_kwargs}.")
@@ -53,7 +53,7 @@ def prepare_plugin_task(name, task, path_to_tasks, **gen_kwargs):
                 # job response - the result of PUT \task\run endpoint
                 raise PluginsRunException(err_msg)
 
-        return repo_task_func_staged
+        return repo_task_func
 
     except Exception as e: # pylint: disable=broad-except # catching all exceptions for called plugin task
         logging.exception(f"Plugin task exception during compilation: {e}")
