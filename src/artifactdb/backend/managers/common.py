@@ -334,11 +334,17 @@ class ArtifactDBBackendManagerBase(BackendManagerBase):
                                 f"it will be replaced by redirection link {_tgtid}")
             redir["_extra"]["link"] = {"artifactdb": _tgtid}
 
+    def exclude_matching_ignored(self, meta_files, ignored):
+        for meta_file in meta_files:
+            if not meta_file in ignored:
+                yield meta_file
 
     def get_documents(self, project_id, version=None):
         files = self.s3.list_metadata_files(project_id,version)
+        ignored = self.s3.get_ignore_list(project_id,version)
+        if ignored:
+            files = self.exclude_matching_ignored(files, ignored)
         links = {}  # per-versions, then per-path
-
         docs = []
         for key in files:
 

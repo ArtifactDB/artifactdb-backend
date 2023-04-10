@@ -16,7 +16,7 @@ from artifactdb.identifiers.gprn import parse_resource_id, validate, NoSuchGPRN
 from artifactdb.utils.context import storage_default_client_context
 from artifactdb.backend.utils import META_FOLDER, generate_revision_file_key, generate_permissions_file_key, \
                                   generate_jsondiff_folder_key, generate_deleteme_file_key, generate_links_file_key, \
-                                  DeleteMe, ArtifactLinks,DELETEME_FILE_NAME
+                                  generate_ignore_file_key, DeleteMe, ArtifactLinks,DELETEME_FILE_NAME
 
 
 class InvalidLinkError(Exception): pass
@@ -386,6 +386,19 @@ class S3Client:
         self.register_internal_metadata(project_id,version,deleteme_obj,generate_deleteme_file_key)
 
         return deleteme_obj
+
+    def get_ignore_list(self, project_id, version):
+        ignore_key = generate_ignore_file_key(project_id, version)
+        try:
+            data, headers = self.download(ignore_key)
+            ignored = {f.lstrip("/").strip() for f in data.splitlines()}
+            logging.debug(f"Found ignore file at {ignore_key}: {ignored}")
+            return ignored
+        except ClientError as exc:
+            if exc.response.get("Error",{}).get("Code",None) in ("404","NoSuchKey"):
+                return set()
+            else:
+                raise
 
     def get_internal_metadata(self, project_id, version, generate_key_func):
         key = generate_key_func(project_id,version)

@@ -11,6 +11,9 @@ JSONDIFF_FOLDER = "..diff"
 # within s3 a file that contain projects information that need to delete
 DELETEME_FILE_NAME = "..deleteme"
 
+# Filename storing files that should be excluded from indexing
+IGNORE_FILE_NAME = ".adbignore"
+
 def generate_file_key_for(project_id, version, key_name):
     project_id = project_id.rstrip("/")
     version = version.rstrip("/")
@@ -67,6 +70,12 @@ def generate_deleteme_file_key(project_id, version=None):
     else:
         key = "{}/{}".format(project_id,DELETEME_FILE_NAME)
     return key
+
+
+def generate_ignore_file_key(project_id, version):
+    assert project_id
+    assert version
+    return f"{project_id}/{version}/{IGNORE_FILE_NAME}"
 
 
 def serialize_job_result(result, deep=False):
