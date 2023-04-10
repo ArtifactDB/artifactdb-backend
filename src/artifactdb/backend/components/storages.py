@@ -391,7 +391,8 @@ class S3Client:
         ignore_key = generate_ignore_file_key(project_id, version)
         try:
             data, headers = self.download(ignore_key)
-            ignored = {f.lstrip("/").strip() for f in data.splitlines()}
+            # add project/version in path to match what s3 lists
+            ignored = {"{}/{}/{}".format(project_id,version,f.lstrip("/").strip()) for f in data.splitlines()}
             logging.debug(f"Found ignore file at {ignore_key}: {ignored}")
             return ignored
         except ClientError as exc:

@@ -338,6 +338,10 @@ class ArtifactDBBackendManagerBase(BackendManagerBase):
         for meta_file in meta_files:
             if not meta_file in ignored:
                 yield meta_file
+            else:
+                ignored.remove(meta_file)
+        if ignored:
+            logging.warning(f"Remaining ignored files found after filtering: {ignored}")
 
     def get_documents(self, project_id, version=None):
         files = self.s3.list_metadata_files(project_id,version)
