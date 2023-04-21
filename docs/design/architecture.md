@@ -58,4 +58,3 @@ All ArtifactDB instances share the same features:
   internally within ArtifactDB instances.
 - Deployed as high performance, responsive and scalable REST APIs, built on top of Kubernetes, in the cloud.
 
-
