@@ -391,7 +391,8 @@ class SchemaClientGitlab(SchemaClient):
             path_list = [doc_type,version]
             if self.folder:
                 path_list.insert(0, self.folder)
-            path = "%2F".join(path_list)
+            # ensure "/" are properly encoded in the folder parameter as well
+            path = "/".join(path_list).replace("/","%2F")
             result = self._perform_request(self.content_url.format(path))
             if result is None:
                 schema = None
