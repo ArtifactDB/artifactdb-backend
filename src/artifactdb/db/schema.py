@@ -345,6 +345,9 @@ class SchemaClientGitlab(SchemaClient):
         # commit URLs
         commits_path = os.path.join(parsed.path, "commits")
         self.commits_url = parsed._replace(path=commits_path).geturl()
+        # folder & file path are passed as arg in query string, needs to encode / into %2F
+        # in case the path pointing to folder holding all schemas has multiple levels
+        self.folder = self.folder.replace('/', '%2F')
 
     def get_types_url(self):
         url = self.tree_url + f"&path={self.folder}" + f"&per_page={self.per_page}"
@@ -391,8 +394,7 @@ class SchemaClientGitlab(SchemaClient):
             path_list = [doc_type,version]
             if self.folder:
                 path_list.insert(0, self.folder)
-            # ensure "/" are properly encoded in the folder parameter as well
-            path = "/".join(path_list).replace("/","%2F")
+            path = "%2F".join(path_list)
             result = self._perform_request(self.content_url.format(path))
             if result is None:
                 schema = None
