@@ -38,6 +38,15 @@ class OIDCConfig(PrintableYamlConfig):
     kids = {}
 
 
+class ActiveDirectoryConfig(PrintableYamlConfig):
+    __mapping__ = {
+        "dist_list_url_template": Attr("dist_list_url_template", str),
+        "ttl": Attr("ttl", int)
+    }
+
+    dist_list_url_template = None  # no distrib-list support by default
+    ttl = 24*60*60  # a whole day
+
 # Known clients
 class AuthClients(PrintableYamlConfig):
     __mapping__ = {
@@ -58,6 +67,9 @@ class AuthConfigBase(PrintableYamlConfig):
         'service_account': Attr("service_account",dict),
         # test only
         'test_client': Attr('test_client', dict),
+        # anything related to AD, additional user info
+        'ad': Attr('ad',ActiveDirectoryConfig),
+        'distribution_list_cache': Attr('distribution_list_cache', dict),
     }
     # master switch
     enabled = True  # disable it means no authorization, but authentication (login via Keycloak) is still required
@@ -71,4 +83,6 @@ class AuthConfigBase(PrintableYamlConfig):
     service_account = None
     # nothing by default
     test_client = {}
+    ad = ActiveDirectoryConfig()
+    distribution_list_cache = None
 

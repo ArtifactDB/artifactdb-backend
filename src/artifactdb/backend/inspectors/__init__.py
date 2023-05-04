@@ -1,6 +1,6 @@
 
 
-class InspectorBase(object):
+class InspectorBase:
 
     alias = None  # set by manager
 

@@ -19,7 +19,7 @@ class ListerInspector(InspectorBase):
         }
     }
 
-    def inspect(self, s3data, project_id, version, **kwargs):
+    def inspect(self, s3data, project_id, version, **kwargs):  # pylint: disable=arguments-renamed
         """
         Return metadata for given `s3data` (coming from an s3 listing).
         `project_id` and `version` are provided for context.

@@ -441,6 +441,14 @@ class OpenIDFetcher:
         self.cache = get_cache(cache_cfg)
 
     def fetch_well_known(self, url):
+        if not url:
+            # no well-known, return fake info
+            return {
+                "issuer": "no-issuer",
+                "jwks_uri": "no-certs",
+                "token_endpoint": "no-token-endpoint",
+                "authorization_endpoint": "no-auth-endpoint",
+            }
         response = requests.get(url,timeout=DEFAULT_TIMEOUT)
         if response.status_code != 200:
             raise WellKnownException(".well-known URL '{}' not reachable: {} ({})".format(url,response.status_code,response.text))

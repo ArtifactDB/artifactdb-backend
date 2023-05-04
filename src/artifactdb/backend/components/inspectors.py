@@ -1,13 +1,12 @@
+# pylint: disable=no-member
 import os
 import logging
-import datetime
 import json
 
 from artifactdb.backend.components import WrappedBackendComponent
-from artifactdb.identifiers.gprn import get_parents, lca, get_lineage
 from artifactdb.utils.misc import get_class_from_classpath
 from artifactdb.config.utils import init_model
-from artifactdb.config.inspectors import InspectorConfig, CoreInspectorConfig
+from artifactdb.config.inspectors import InspectorConfig
 
 
 
@@ -23,9 +22,6 @@ class InspectorsManagerComponent(WrappedBackendComponent):
     def wrapped(self):
         return InspectorsManager(self.manager,self.main_cfg.inspectors)
 
-    def __getitem__(self, schema_alias):
-        return self._wrapped[schema_alias]
-
 
 class InspectorsManager:
 
@@ -40,7 +36,7 @@ class InspectorsManager:
                 klass = get_class_from_classpath(inspect.core.classpath)
                 klass.alias = inspect.alias
                 if inspect.alias in self.inspectors:
-                    raise InpsectorError(f"Inspector {inspect.alias!r} already registered")
+                    raise InspectorError(f"Inspector {inspect.alias!r} already registered")
                 self.inspectors[inspect.alias] = klass(self.manager)
             else:
                 raise InspectorError(f"Inspector type {dinspect['type']!r} is not supported")
@@ -54,7 +50,7 @@ class InspectorsManager:
         where `metapath` and a filename for the metadata `meta` to be stored in.
         """
         metas = []
-        for alias,inspector in self.inspectors.items():
+        for inspector in self.inspectors.values():
             logging.debug(f"Inspecting {s3data['Key']} with {inspector}")
             inspected = inspector.inspect(s3data, project_id, version)
             if inspected:
@@ -76,6 +72,6 @@ class InspectorsManager:
         for metapath,meta in metas:
             logging.debug(f"Uploading {metapath}")
             self.manager.s3.upload(metapath,json.dumps(meta,indent=2),content_type="application/json")
-        
+
         return metas
 
