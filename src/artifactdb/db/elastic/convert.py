@@ -44,7 +44,7 @@ class EsModelScript:
         schemas = []
         # explore types > versions > schemas
         raw_types = self.client.get_types()
-        assert raw_types
+        assert raw_types, f"Schema configuration error for client {self.client.alias}: couldn't find schemas"
         types = [elem["name"] for elem in raw_types]
         logging.info(f"Found the following types: {types}")
         for one_type in types:
@@ -115,7 +115,7 @@ class EsModelScript:
                 key_type = "array"
 
         if not key_type:
-            if not value.get('enum') and key != "_elasticsearch":
+            if not value.get('enum') and not value.get("const") and key != "_elasticsearch":
                 raise ValueError(f"type is missing, Invalid property:: {key}")
         return key_type
 
