@@ -419,6 +419,9 @@ class SchemaClientLocal(SchemaClient):
     """
 
     def __init__(self, schema_cfg):
+        assert not schema_cfg.folder, f"Schema configuration error for local client '{schema_cfg.alias}: 'folder' " + \
+                                      "parameter must stay empty (ie. \"\"), use 'base_uri' to point to folder " + \
+                                      "containing schemas"
         super().__init__(schema_cfg)
         self.init()
 
@@ -429,7 +432,7 @@ class SchemaClientLocal(SchemaClient):
         raise TypeError("SchemaClientLocal can't have a URL for versions")
 
     def init(self):
-        self.schema_files = list(glob.glob(f"{self.base_uri}/**/*.json"))
+        self.schema_files = list(glob.glob(f"{self.base_uri}/**/*.json",recursive=True))
         self.schema_store = {}
         for schema_file in self.schema_files:
             schema = json.load(open(schema_file))
