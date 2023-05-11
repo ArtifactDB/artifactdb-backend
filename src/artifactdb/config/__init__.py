@@ -51,6 +51,7 @@ class ConfigBase(PrintableYamlConfig):
     doc_url = None
     logo_url = None
     root_url = None
+    hermes = HermesConfig()
     # human-readable name & description about the instance
     name = None
     description = None
