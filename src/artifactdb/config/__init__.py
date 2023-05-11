@@ -16,6 +16,7 @@ from .locks import LockConfig
 from .permissions import PermissionsConfig
 from .schemas import SchemaConfig
 from .gprns import GPRNConfig
+from .events import HermesConfig
 
 
 #########################
@@ -29,6 +30,7 @@ class ConfigBase(PrintableYamlConfig):
         'gunicorn': Attr('gunicorn', dict),
         'auth': Attr('auth', AuthConfigBase),
         'cors': Attr('cors', CorsConfig),
+        'hermes': Attr('hermes', HermesConfig),
         'version': Attr('version', str),
         'env': Attr('env', str),
         'build': Attr('build', str),
