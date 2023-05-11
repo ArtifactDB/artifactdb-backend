@@ -42,6 +42,7 @@ class ConfigBase(PrintableYamlConfig):
         'name': Attr('name', str),
         'description': Attr('description', str),
         'prefixes': Attr('prefixes', list),
+        'static_folder': Attr('static_folder', str),
     }
 
     # TODO: until __version__ is reworked as dict() of component's version
@@ -53,6 +54,8 @@ class ConfigBase(PrintableYamlConfig):
     # human-readable name & description about the instance
     name = None
     description = None
+    # folder containing static files, eg. for Swagger UI.
+    static_folder = "./static"
 
     def __repr__(self):
         return "<{}: {}>".format(self.__class__.__name__, os.path.basename(self.config_file))

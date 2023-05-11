@@ -136,7 +136,7 @@ class BaseRESTAPI(FastAPI):
         self.openapi = custom_openapi
 
     def setup_swagger(self):
-        self.mount("/static", StaticFiles(directory="static"), name="static")
+        self.mount("/static", StaticFiles(directory=self.cfg.static_folder), name="static")
         # we assume the first prefix is the one that will allow the redirection
         redir_prefix = self.cfg.prefixes[0]
         redir_url = "/{}".format(os.path.join(redir_prefix.strip("/"),self.swagger_ui_oauth2_redirect_url.strip("/")))
