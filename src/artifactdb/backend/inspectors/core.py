@@ -5,7 +5,7 @@ from . import InspectorBase
 class ListerInspector(InspectorBase):
 
     schema = "entry.minimal/v1.json"
-    schema_def = {
+    schema_defs = [{
         "$schema": "http://json-schema.org/draft-07/schema",
         "$id": "entry.minimal.v1",
         "type": "object",
@@ -17,7 +17,7 @@ class ListerInspector(InspectorBase):
                 "description": "File path relative to the project/version folder",
             }
         }
-    }
+    }]
 
     def inspect(self, s3data, project_id, version, **kwargs):  # pylint: disable=arguments-renamed
         """
@@ -29,7 +29,6 @@ class ListerInspector(InspectorBase):
         assert elems.pop(0) == project_id
         assert elems.pop(0) == version
         key = os.path.join(*elems)
-
         return {
             "path": key,
         }

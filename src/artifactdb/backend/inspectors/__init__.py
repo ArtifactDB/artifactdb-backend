@@ -3,6 +3,13 @@
 class InspectorBase:
 
     alias = None  # set by manager
+    schema = None
+
+    @property
+    def id(self):
+        assert self.__class__.schema, "Inspector has no schema assigned, invalid"
+        # defaulting to schema name (what if multiple version? not sure it's even possible or make sense)
+        return self.__class__.schema.split("/")[0]
 
     def __init__(self, manager):
         """
