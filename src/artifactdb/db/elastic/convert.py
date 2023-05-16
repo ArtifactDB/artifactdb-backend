@@ -26,6 +26,18 @@ DATATYPES = {
 class EsModelScript:
 
     def __init__(self, client, output_file, types=None, merge=False, class_name=None, clear_cache=True):
+        """
+        - generate python model based on a schema `client` instance, 
+        - writes the result in `output_file`.
+        - `types` can be used to filter down to a subset of types available in the `client`, otherwise all are
+          considered.
+        - `merge` is used when base schemas defines base fields, which are then enriched by another schema it derived
+          from, resulting in merging the common fields content together.
+        - `class_name` can be used to specify the base class name in the generated python code ("ArtifactDBModel" is
+          used othewise.
+        - `clear_cache` removes any previous cached entries from the schema client cache itself (recommended).
+
+        """
         self.inner_docs = {}
         self.inner_doc_text = ""
         self.client = client
