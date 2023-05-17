@@ -14,7 +14,7 @@ class SwitchMiddlewareBase:
     def __init__(self, switch_cfg, data_ctx_var, switch_ctx_var):
         """
         `switch_cfg` is a artifactdb.config.switches.Switch instance
-        `data_ctx_var` is the context var holding the data behing the switch value.
+        `data_ctx_var` is the context var holding the data behind the switch value.
         `switch_ctx_var` is the switch value found from the header specified in the config
         (eg. "v1", "v2", ...)
         """

@@ -7,6 +7,7 @@ from artifactdb.backend.components.locks import ProjectLockedError
 from artifactdb.db.elastic import DataInconsistencyException
 from artifactdb.utils.misc import get_root_url
 from artifactdb.utils.stages import FAILED
+from artifactdb.utils.context import storage_default_client_context
 from artifactdb.identifiers.gprn import build as build_gprn
 from artifactdb.rest.resources import APIErrorException, PrettyJSONResponse, ElasticsearchJSONResponse, \
                                  SubmittedJob
@@ -52,7 +53,13 @@ def process_project_complete(
     request=None
 ):
     permissions = permissions if permissions is not None else {}
-    index_kwargs = {"project_id": project_id,"version": version, "revision": revision}
+    index_kwargs = {
+        "project_id": project_id,
+        "version": version,
+        "revision": revision,
+        # if no context, alias is None, meaning: use default storage
+        "storage_alias": storage_default_client_context.get(),
+    }
     perm_manager = celery_app.manager.permissions_manager
     # sanity check
     if overwrite_permissions and not permissions:
