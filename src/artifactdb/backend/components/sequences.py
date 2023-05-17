@@ -358,6 +358,7 @@ class SequenceManager(BackendComponent):
         self.cfg = cfg.sequences
         self.clients = SequencesMapping()  # per sequence prefix
         self.storage_provider = storage_provider if storage_provider else manager.storage_manager.get_storage
+        self._context = None
         for seqcfg in self.cfg.clients:
             assert not seqcfg.project_prefix in self.clients, \
                 "Sequence with prefix '{}' already registered".format(seqcfg.project_prefix)
@@ -371,6 +372,13 @@ class SequenceManager(BackendComponent):
         for prefix,client in self.clients.items():
             logging.info(f"Initializing sequence client for prefix {prefix}")
             client.init(purge=purge)
+
+    def switch(self, alias):
+        if self._context:
+            sequence_context_name.reset(self._context)
+            self._context = None
+        if not alias is None:
+            self._context = sequence_context_name.set(alias)
 
     @property
     def default_client(self):
