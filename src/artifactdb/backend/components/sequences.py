@@ -9,10 +9,12 @@ from sqlalchemy.exc import InternalError
 
 from artifactdb.backend.components import BackendComponent
 from artifactdb.config.sequences import SequenceConfig
+from artifactdb.utils.context import sequence_context_name
 import artifactdb.resources.sql
 
 
 class SequenceError(Exception): pass
+class SequenceContextError(SequenceError): pass
 class SequencePoolError(SequenceError): pass
 class SequenceEmptyError(SequenceError): pass
 class SequenceVersionError(SequenceError): pass
@@ -233,8 +235,9 @@ class SequenceClient(BaseSequenceClient):
 
     def __repr__(self):
         return f"<{self.__class__.__name__} " + \
-               f"(schema='{self.schema_name}', " + \
-               f"prefix='{self.cfg.project_prefix}', " + \
+               f"(schema={self.schema_name!r}, " + \
+               f"prefix={self.cfg.project_prefix!r}, " + \
+               f"context={self.cfg.context!r}, " + \
                f"default={self.cfg.default})>"
 
     def _format_project_id(self, seq_id):  # pylint: disable=unused-argument  # used during f-string formatting
@@ -327,6 +330,24 @@ class SequenceClient(BaseSequenceClient):
         return self.fetch_seq_pools(params)
 
 
+class SequencesMapping(dict):
+
+    def __getitem__(self, key):
+        client = super().__getitem__(key)
+        seq_switch = sequence_context_name.get()
+        if not seq_switch:
+            return client
+        # if a context is set, we must ensure the requested prefix matches a client context name, if defined.
+        # (note we could match the prefix itself, meaning the context variable directly storing the prefix, but
+        # multiple sequences can be allowed for one context, eg. PRJ and test-PRJ)
+        if client.cfg.context == seq_switch or client.cfg.context is None:
+            return client
+
+        raise SequenceContextError(
+            f"Sequence context {seq_switch!r} doesn't match client context {client.cfg.context!r}"
+        )
+
+
 class SequenceManager(BackendComponent):
 
     NAME = "sequence_manager"
@@ -334,38 +355,44 @@ class SequenceManager(BackendComponent):
     DEPENDS_ON = ["storage_manager"]  # TODO: in ABC and the auto-resolve deps?
 
     def __init__(self, manager, cfg, storage_provider=None, sequence_client_class=SequenceClient, sql_folder=None):
-        self.cfg = cfg.sequence
-        self.clients = {}  # per sequence prefix
+        self.cfg = cfg.sequences
+        self.clients = SequencesMapping()  # per sequence prefix
         self.storage_provider = storage_provider if storage_provider else manager.storage_manager.get_storage
-        if isinstance(self.cfg,dict):
-            self.cfg = [self.cfg]
-        else:
-            for seq_cfg in self.cfg:
-                assert not seq_cfg["project_prefix"] in self.clients, \
-                    "Sequence with prefix '{}' already registered".format(seq_cfg["project_prefix"])
-                seq = SequenceConfig()
-                seq.init_from(seq_cfg)
-                assert seq.uri and seq.project_prefix, "Sequence initialization error, conf: {}".format(seq_cfg)
-                self.clients[seq.project_prefix] = sequence_client_class(
-                                                       seq,
-                                                       storage_provider=self.storage_provider,
-                                                       sql_folder=sql_folder
-                                                   )
-        defaults = [cl for cl in self.clients.values() if hasattr(cl.cfg,"default") and cl.cfg.default]
-        self.default_client = None
-        # find the default client
-        # if only client/conf, it's the default, by default. ah ah.
-        if len(defaults) == 0 and len(self.clients) == 1:
-            self.default_client = list(self.clients.values())[0]
-        else:
-            assert len(defaults) == 1, "More than one (or none) default sequence client: {}".format(defaults)
-            self.default_client = defaults[0]
-        assert self.default_client
+        for seqcfg in self.cfg.clients:
+            assert not seqcfg.project_prefix in self.clients, \
+                "Sequence with prefix '{}' already registered".format(seqcfg.project_prefix)
+            self.clients[seqcfg.project_prefix] = sequence_client_class(
+                seqcfg,
+                storage_provider=self.storage_provider,
+                sql_folder=sql_folder
+            )
 
     def init(self, purge=False):
         for prefix,client in self.clients.items():
             logging.info(f"Initializing sequence client for prefix {prefix}")
             client.init(purge=purge)
+
+    @property
+    def default_client(self):
+        seq_switch = sequence_context_name.get()
+        # include context definition in the filter.
+        defaults = [
+            cl for cl in self.clients.values()
+            if hasattr(cl.cfg,"default") and cl.cfg.default
+                and cl.cfg.context == seq_switch
+        ]
+        # find the default client
+        # if only client/conf, it's the default, by default. ah ah.
+        # there can't be more than one default sequence per context
+        if len(defaults) == 0 and len(self.clients) == 1:
+            default_client = list(self.clients.values())[0]
+        elif len(defaults) != 1:
+            raise SequenceError("More than one (or none) default sequence client: {}".format(defaults))
+        else:
+            default_client = defaults[0]
+
+        assert default_client
+        return default_client
 
     def __repr__(self):
         info = ", ".join([f"(prefix={cl.cfg.project_prefix},default={cl.cfg.default})" for cl in self.clients.values()])

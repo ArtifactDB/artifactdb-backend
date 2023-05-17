@@ -14,6 +14,7 @@ from artifactdb.rest.resources import APIErrorException, PrettyJSONResponse
 from artifactdb.rest.middleware.authcontext import AuthContextMiddleware
 from artifactdb.rest.middleware.es_switch import ESSwitchMiddleware
 from artifactdb.rest.middleware.storage_switch import StorageSwitchMiddleware
+from artifactdb.rest.middleware.sequence_switch import SequenceSwitchMiddleware
 # Usual resources
 from artifactdb.rest.resources import info
 from artifactdb.rest.resources import tasks
@@ -201,7 +202,7 @@ class ArtifactDBApi(BaseRESTAPI):
             self.es_switch_middleware = ESSwitchMiddleware(self.cfg.es.switch)
             self.middleware("http")(self.es_switch_middleware.set_switch_context)
         else:
-            logging.info("No 'es_switch' middleware declaration in config, skip")
+            logging.info("No 'es.switch' middleware declaration in config, skip")
 
         # switcher for storage clients
         if hasattr(self.cfg,"storage") and hasattr(self.cfg.storage,"switch") and self.cfg.storage.switch.header:
@@ -209,7 +210,15 @@ class ArtifactDBApi(BaseRESTAPI):
             self.storage_switch_middleware = StorageSwitchMiddleware(self.cfg.storage.switch)
             self.middleware("http")(self.storage_switch_middleware.set_switch_context)
         else:
-            logging.info("No 'storage_switch' middleware declaration in config, skip")
+            logging.info("No 'storage.switch' middleware declaration in config, skip")
+
+        # switcher for sequences clients
+        if hasattr(self.cfg,"sequences") and hasattr(self.cfg.sequences,"switch") and self.cfg.sequences.switch.header:
+            logging.info(f"Registering 'sequence_switch' middleware, rules: {self.cfg.sequences.switch}")
+            self.sequence_switch_middleware = SequenceSwitchMiddleware(self.cfg.sequences.switch)
+            self.middleware("http")(self.sequence_switch_middleware.set_switch_context)
+        else:
+            logging.info("No 'sequences.switch' middleware declaration in config, skip")
 
         # CORS
         if hasattr(self.cfg,"cors") and self.cfg.cors.enabled:

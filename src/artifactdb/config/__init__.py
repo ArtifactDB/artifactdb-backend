@@ -11,6 +11,7 @@ from .utils import PrintableYamlConfig, ApiConfigBaseHandler, init_model
 from .auth import AuthConfigBase
 from .cors import CorsConfig
 from .storages import set_storage_models, set_legacy_s3_config, StorageConfig, S3InventoryConfig
+from .sequences import set_sequence_models, SequencesConfig
 from .elasticsearch import ElasticMainConfig
 from .locks import LockConfig
 from .permissions import PermissionsConfig
@@ -181,6 +182,7 @@ class ArtifactDBConfigBase(ConfigBase):
     # in order, as set_storage_models() will init actual config models instead of dict
     __handler__.post_hooks = [
         set_storage_models,
+        set_sequence_models,
         set_legacy_s3_config,
     ]
 
@@ -190,14 +192,18 @@ class ArtifactDBConfigBase(ConfigBase):
         'lock': Attr('lock', LockConfig),
         'permissions': Attr('permissions', PermissionsConfig),
         'schema': Attr('schema', SchemaConfig),
+        # sequence config: legacy
         'sequence': Attr('sequence',list),
+        # sequence config: new
+        'sequences': Attr('sequences', SequencesConfig),
         's3_inventory':Attr('s3_inventory',S3InventoryConfig),
         'gprn': Attr('gprn', GPRNConfig),
         'celery': Attr('celery', CeleryConfig),
         'inspectors': Attr('inspectors',list),
     }
 
-    sequence = []
+    sequence = []  # legacy
+    sequences = SequencesConfig()
     inspectors = []
     s3_inventory = None
     permissions = PermissionsConfig()

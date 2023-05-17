@@ -9,7 +9,8 @@ from artifactdb.utils.stages import CREATED, VERSION_CREATED, INDEXED, PURGED, F
 from artifactdb.rest.resources import APIErrorException, NotAuthenticated, Forbidden, ResourceBase
 from artifactdb.backend.components.locks import ProjectLockedError
 from artifactdb.backend.components.sequences import SequenceError, SequenceVersionError, \
-                                                    SequencePoolError, SequenceEmptyError
+                                                    SequencePoolError, SequenceEmptyError, \
+                                                    SequenceContextError
 from artifactdb.rest.helpers import open_log_request
 from .upload import UploadContract
 
@@ -43,11 +44,21 @@ class SequencesResource(ResourceBase):
                     status_code=400,
                     status="error",
                     reason=f"Unknown prefix {e}, not matching a known sequence")
+            except SequenceContextError as e:
+                raise APIErrorException(
+                    status_code=400,
+                    status="error",
+                    reason=f"Invalid sequence context: {e}")
             except SequencePoolError as e:
                 raise APIErrorException(
                         status_code=400,
                         status="error",
                         reason=f"Can't provision project, pool error: {e}")
+            except SequenceError as e:
+                raise APIErrorException(
+                    status_code=400,
+                    status="error",
+                    reason=f"Unable to obtain sequence to provision the project ID: {e}")
             next_version = seq_mgr.next_version(next_pid)
             logging.info(f"Requested new project/version '{next_pid}/{next_version}'")
             # the fully qualified upload endpoint requires "uploader" role by default, if directly accessed.
@@ -114,6 +125,11 @@ class SequencesResource(ResourceBase):
                         status_code=400,
                         status="error",
                         reason=f"Project {project_id} doesn't exist, can't provision version")
+            except SequenceContextError as e:
+                raise APIErrorException(
+                    status_code=400,
+                    status="error",
+                    reason=f"Invalid sequence context: {e}")
             except SequenceError as e:
                 raise APIErrorException(
                         status_code=500,
