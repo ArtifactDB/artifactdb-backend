@@ -116,6 +116,9 @@ class ElasticMainConfig(PrintableYamlConfig):
 
 
 class SchemaRouteConfig(PrintableYamlConfig):
+    """
+    Specifies indexing routing rules based on schema alias.
+    """
     __mapping__ = {
         "aliases": Attr("aliases",list),
         "versions": Attr("versions",list),
@@ -124,12 +127,24 @@ class SchemaRouteConfig(PrintableYamlConfig):
     aliases = []
     versions = []
 
+class StorageRouteConfig(PrintableYamlConfig):
+    """
+    Specifies indexing routing rules based on storage alias.
+    """
+    __mapping__ = {
+        "aliases": Attr("aliases",list),
+    }
+    # if a storage alias is found in that list, docs are router there
+    aliases = []
+
 
 class RouterConfig(PrintableYamlConfig):
     __mapping__ = {
         "schema": Attr("schema",SchemaRouteConfig),
+        "storage": Attr("storage",StorageRouteConfig),
     }
     schema = SchemaRouteConfig()
+    storage = StorageRouteConfig()
 
 
 class SchemaBasedDynamicModelConfig(PrintableYamlConfig):

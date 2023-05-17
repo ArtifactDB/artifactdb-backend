@@ -13,7 +13,8 @@ import jsonpath_rw_ext
 from artifactdb.rest.auth import RootUser, BaseUser
 from artifactdb.db.schema import SchemaClient,SchemaClientManager
 from artifactdb.config.elasticsearch import ElasticsearchConfig, ElasticsearchManagerConfig
-from artifactdb.utils.context import auth_user_context, skip_auth_context, es_default_index_context, es_switch_context
+from artifactdb.utils.context import auth_user_context, skip_auth_context, es_default_index_context, \
+                                      es_switch_context, storage_default_client_context
 from artifactdb.identifiers.gprn import generate as generate_gprn
 from artifactdb.identifiers.aid import unpack_id
 from .client import ElasticClient
@@ -418,7 +419,7 @@ class ElasticManager:
             es_client = self.clients[model_version]
         except KeyError:
             logging.warning(f"Model '{model_version}' doesn't exist, returning default client")
-            es_client = self.clients[self.default_version_if_no_schema]
+            es_client = self.default_es_client
 
         return es_client
 
@@ -430,14 +431,27 @@ class ElasticManager:
           from `schema` section
         - explicit: `es` section can define a `schema` sub-section with explicit matching.
         """
+        # TODO: case 1, 2, 3 would need seprate methods
+
+        # 1. check if storage context matches one of declared we don't even look at the document, and its schemas, it
+        # doesn't matter in this scenario where a storage is mapped to indices directly, regardless of the models
+        storage_ctx = storage_default_client_context.get()
+        if storage_ctx:
+            for es_client in self.clients.values():
+                if storage_ctx in es_client.cfg.router.storage.aliases:
+                    logging.error(f"Storage context {storage_ctx!r} matches router's storage alias, " + \
+                                  f"using ES client {es_client}")
+                    return es_client
+
+        # Continuing with doc inspection (schema/model based routing)
         try:
             schema_str = doc["$schema"]
         except KeyError:
-            return self.clients[self.default_version_if_no_schema]
+            return self.default_es_client
 
         if schema_str is None:
             # $schema field exists, but not set, so using default client
-            return self.clients[self.default_version_if_no_schema]
+            return self.default_es_client
 
         # try to find in the cache
         es_client = self.schema_map.get(schema_str)
@@ -449,11 +463,11 @@ class ElasticManager:
         version = version_json.replace(".json","")
         schema_client = self.schema_manager.get_client_for_document(name,version_json)
 
-        # 1. check if the doc matches a schema client alias
+        # 2. check if the doc matches a schema client alias
         if schema_client:
             for es_client in self.clients.values():
                 if schema_client.alias in es_client.cfg.router.schema.aliases:
-                    logging.debug(f"Document with $schema {schema_str} matches router's schema alias {schema_client.alias}, " + \
+                    logging.info(f"Document with $schema {schema_str} matches router's schema alias {schema_client.alias}, " + \
                                   f"using ES client {es_client}")
                     self.schema_map[schema_str] = es_client
                     return es_client
@@ -461,10 +475,10 @@ class ElasticManager:
             logging.warning(f"No schema client found to handle document with $schema {schema_str}, " + \
                             "this is unexpected")
 
-        # 2. check if the schema version matches the router config
+        # 3. check if the schema version matches the router config
         for es_client in self.clients.values():
             if version in es_client.cfg.router.schema.versions:
-                logging.debug(f"Document with $schema {schema_str} matches router's schema version, " + \
+                logging.info(f"Document with $schema {schema_str} matches router's schema version, " + \
                               f"using ES client {es_client}")
                 self.schema_map[schema_str] = es_client
                 return es_client
@@ -472,6 +486,11 @@ class ElasticManager:
         logging.warning("No specific ES client found for routing documents, using default one")
         # TODO: should we cache? unit test says no but we could?
         #self.schema_map[schema_str] = self.clients[self.default_version_if_no_schema]
+
+        return self.default_es_client
+
+    @property
+    def default_es_client(self):
         return self.clients[self.default_version_if_no_schema]
 
     def get_client_for_index(self, index_name):
