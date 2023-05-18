@@ -16,7 +16,7 @@ from artifactdb.identifiers.gprn import parse_resource_id, validate, NoSuchGPRN
 from artifactdb.utils.context import storage_default_client_context
 from artifactdb.backend.utils import META_FOLDER, generate_revision_file_key, generate_permissions_file_key, \
                                   generate_jsondiff_folder_key, generate_deleteme_file_key, generate_links_file_key, \
-                                  generate_ignore_file_key, DeleteMe, ArtifactLinks,DELETEME_FILE_NAME
+                                  generate_ignore_file_key, DeleteMe, ArtifactLinks, DELETEME_FILE_NAME
 
 
 class InvalidLinkError(Exception): pass
@@ -281,7 +281,7 @@ class S3Client:
         # switching to v2, json-based metadata files only
         #expr = "Contents[?ends_with(@.Key,'.json')]"
         if not ignore_pending_deletion:
-            deleteme_keys = list_keys(f"Contents[?contains(Key,'{DELETEME_FILE_NAME}')]")
+            deleteme_keys = list_keys(f"Contents[?ends_with(Key,'{DELETEME_FILE_NAME}')]")
             if deleteme_keys:
                 raise PendingDeletionProjectError(f"Deletion in progress for project '{project_id}'")
         yaml_keys = list_keys("Contents[?ends_with(@.Key,'.yaml')]")
