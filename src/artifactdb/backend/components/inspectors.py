@@ -86,9 +86,9 @@ class InspectorsManager:
             # do not inspect generated metadata files in ..artifactdb folder (internal metadata folder)
             # nor json files which are metadata files (very unlikely to have a mix of the 2 cases though)
             if (
-                s3data["Key"].startswith(os.path.join(project_id,version,self.internal_meta_folder)) \
-                or (s3data["Key"].endswith(".json") and s3data["Key"] not in ignored) \
-                or s3data["Key"].startswith(ignore_key)
+                # ignore all dot files, considered internal, reserved
+                s3data["Key"].startswith(os.path.join(project_id,version,".")) \
+                or (s3data["Key"].endswith(".json") and s3data["Key"] not in ignored)
             ):
                 continue  # it's a previously inspected meta or an uploaded metadata
 
