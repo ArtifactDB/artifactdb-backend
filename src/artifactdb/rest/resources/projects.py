@@ -9,6 +9,7 @@ from typing_extensions import Literal
 
 from artifactdb.backend.components.permissions import NoPermissionFoundError, Permissions
 from artifactdb.backend.components.locks import ProjectLockedError
+from artifactdb.utils.context import storage_default_client_context
 from artifactdb.db.elastic.utils import escape_query_param
 from artifactdb.rest.helpers import process_project_update, fetch_project_metadata, get_job_response, \
                                     abort_project_upload, get_sts_credentials
@@ -393,8 +394,15 @@ class ProjectsResource(ResourceBase):
             version = es.convert_revision_to_version(project_id,version) or version
             logging.info("Creating a purge job to expire and delete version {} ".format(version) + \
                          "from project {}".format(project_id))
-            expires_job_id = celery_app.send_task("purge_expired",
-                                                  kwargs={"project_id": project_id, "version": version, "force": True})
+            expires_job_id = celery_app.send_task(
+                "purge_expired",
+                kwargs={
+                    "project_id": project_id,
+                    "version": version,
+                    "force": True,
+                    "storage_alias": storage_default_client_context.get()
+                }
+            )
             expires_job_id = str(expires_job_id)
             resp = get_job_response(expires_job_id,request)
 
