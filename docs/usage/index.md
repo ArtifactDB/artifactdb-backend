@@ -4,6 +4,10 @@ TODO:
 - describe indexing process
 - show different ways to create and register a model
 - explain index management endpoints
+- explain routing rules, in order:
+  1. based on storages aliases, fetch from storage context
+  2. based on schema aliases
+  3. based on schema versions
 
 
 ## Excluding files from indexing
