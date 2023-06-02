@@ -205,7 +205,7 @@ class ArtifactDBConfigBase(ConfigBase):
     sequence = []  # legacy
     sequences = SequencesConfig()
     inspectors = []
-    s3_inventory = None
+    s3_inventory = S3InventoryConfig()
     permissions = PermissionsConfig()
 
 
