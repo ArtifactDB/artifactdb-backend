@@ -32,7 +32,7 @@ class BackendManagerBase:
             logging.info(f"Adding backend component {component_class.NAME!r}")
             setattr(self,component_class.NAME,component_inst)
             return component_inst
-        except InvalidComponentError as exc:
+        except Exception as exc:
             # build arg has precedence over the component re: required
             is_required = required if not required is None else component_class.REQUIRED
             if not is_required:
