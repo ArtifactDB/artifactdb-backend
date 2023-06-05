@@ -15,6 +15,8 @@ class SchemaClientConfig(PrintableYamlConfig):
 
     types = None
     client = None
+    cache = None
+    cache_ttl = 0
     extra = {}
 
     def init_from(self, conf):

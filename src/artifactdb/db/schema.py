@@ -447,7 +447,8 @@ class SchemaClientLocal(SchemaClient):
         self.init()
 
     def _clean(self, path):
-        return path.replace(self.base_uri,"").lstrip("/")
+        # limit replacement to 1 occurent: if base_uri is ".", it would interfere with the ".json" suffix
+        return path.replace(self.base_uri,"",1).lstrip("/")
 
     def _types_as_list(self, all_types):
         return [list(_.values())[0] for _ in all_types]
