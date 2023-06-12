@@ -40,7 +40,8 @@ class ElasticClient:
         self.client = self.client_class(
                 cfg.uri,
                 # one of the standard SSL certs location (used by curl for instance)
-                ca_certs=os.environ.get("SSL_CERT_FILE")
+                ca_certs=os.environ.get("SSL_CERT_FILE"),
+                **cfg.extra,
             )
         if cfg.alias:
             logging.info(f"Alias definition found: {cfg.alias}")

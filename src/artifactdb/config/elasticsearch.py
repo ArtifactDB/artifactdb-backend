@@ -178,6 +178,7 @@ class ElasticsearchConfig(PrintableYamlConfig):
         'index_settings': Attr('index_settings',dict),
         'router': Attr("router",RouterConfig),
         'client_class': Attr("client_class",str),
+        'extra': Attr("extra",dict),
     }
     uri = None
     index = None
@@ -195,5 +196,6 @@ class ElasticsearchConfig(PrintableYamlConfig):
     router = RouterConfig()
     dynamic = DynamicModelConfig()
     client_class = "elasticsearch.client.Elasticsearch"
-
+    # additional kwargs passed to the client init
+    extra = {}
 
