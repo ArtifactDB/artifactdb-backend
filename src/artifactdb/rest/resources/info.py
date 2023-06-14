@@ -46,13 +46,14 @@ class InfoResource(ResourceBase):
                 }
             }
             # project prefixes
-            if hasattr(cfg, "sequence"):
-                for seq in cfg.sequence:
-                    results["sequences"].append({
-                        "prefix": seq["project_prefix"],
-                        "default": seq.get("default",False),
-                        "test": seq.get("test") or seq["project_prefix"].startswith("test-"),
-                    })
+            legacy = getattr(cfg,"sequence",[])
+            sequences = hasattr(cfg,"sequences") and [s.to_dict() for s in cfg.sequences.clients] or legacy
+            for seq in sequences:
+                results["sequences"].append({
+                    "prefix": seq["project_prefix"],
+                    "default": seq.get("default",False),
+                    "test": seq.get("test") or seq["project_prefix"].startswith("test-"),
+                })
 
             return results
 
