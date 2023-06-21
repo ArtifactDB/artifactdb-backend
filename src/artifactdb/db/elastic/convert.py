@@ -270,10 +270,17 @@ class EsModelScript:
     def generate_code(self, parsed_struct):
         # Note on below code in f-string: curly brackets for eg. dict require them to be espaced with {{
         models = {
-            "import_statements": """from elasticsearch_dsl import (Document, InnerDoc, Text, Nested, Completion, Keyword,
-                                   Object, MetaField, analyzer, tokenizer, analysis, Field, Short, Float, Long, Double,
-                                   Boolean, Integer, Date)\nfrom artifactdb.db.elastic.models import english_analyzer, Alias, ExtraInfoBase, ArtifactDBDocumentBase
-    """,
+            "import_statements": """
+from elasticsearch_dsl import (
+    Document, InnerDoc, Text, Nested, Completion, Keyword,
+    Object, MetaField, analyzer, tokenizer, analysis, Field,
+    Short, Float, Long, Double, Boolean, Integer, Date)
+
+from artifactdb.db.elastic.models import (
+    english_analyzer, Alias, ExtraInfoBase,
+    ArtifactDBDocumentBase)
+
+""",
             "innerdoc": "",
             "main_class": f"""
 
