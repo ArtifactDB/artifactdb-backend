@@ -9,7 +9,7 @@ from typing_extensions import Literal
 
 from artifactdb.backend.components.permissions import NoPermissionFoundError, Permissions
 from artifactdb.backend.components.locks import ProjectLockedError
-from artifactdb.utils.context import storage_default_client_context
+from artifactdb.utils.context import storage_default_client_context, es_switch_context
 from artifactdb.db.elastic.utils import escape_query_param
 from artifactdb.rest.helpers import process_project_update, fetch_project_metadata, get_job_response, \
                                     abort_project_upload, get_sts_credentials
@@ -400,7 +400,8 @@ class ProjectsResource(ResourceBase):
                     "project_id": project_id,
                     "version": version,
                     "force": True,
-                    "storage_alias": storage_default_client_context.get()
+                    "storage_alias": storage_default_client_context.get(),
+                    "es_alias": es_switch_context.get(),
                 }
             )
             expires_job_id = str(expires_job_id)

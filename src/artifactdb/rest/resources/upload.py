@@ -20,7 +20,7 @@ from artifactdb.utils.stages import INDEXED, MODIFIED, PURGED, FAILED
 from artifactdb.utils.misc import get_root_url, dateparse
 from artifactdb.backend.components.locks import ProjectLockedError
 from artifactdb.backend.components.storages import InvalidLinkError
-from artifactdb.utils.context import storage_default_client_context
+from artifactdb.utils.context import storage_default_client_context, es_switch_context
 from artifactdb.rest.helpers import get_sts_credentials, open_log_request, STSCredentialsError
 from artifactdb.db.elastic.manager import NotFoundError
 
@@ -282,6 +282,7 @@ class UploadResource(ResourceBase):
                                        "project_id": project_id,
                                        "version": version,
                                        "storage_alias": storage_default_client_context.get(),
+                                       "es_alias": es_switch_context.get(),
                                    },
                                    eta=purge_dt
                                )

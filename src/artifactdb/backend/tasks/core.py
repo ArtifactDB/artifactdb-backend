@@ -6,7 +6,7 @@ import dateparser
 from celery import chord
 
 from artifactdb.utils.misc import process_coroutine
-from artifactdb.utils.context import storage_default_client_context
+from artifactdb.utils.context import storage_default_client_context, es_switch_context
 from artifactdb.backend.utils import DELETEME_FILE_NAME
 from artifactdb.backend.managers import RETRYABLE_EXCEPTIONS
 from artifactdb.utils.stages import INDEXED, PURGED, DELETED
@@ -60,11 +60,14 @@ def index_all(self, project_ids=None, storage_alias=None, *args, **kwargs):  # p
 
 
 @task_params(bind=True,name="purge_not_completed",autoretry_for=RETRYABLE_EXCEPTIONS,default_retry_delay=30)
-def purge_not_completed(self, project_id, version=None, storage_alias=None, force=False):
-    result = self._app.manager.es.search_by_project_id(project_id,version)
+def purge_not_completed(self, project_id, version=None, storage_alias=None, es_alias=None, force=False):
+    logging.warning("Now purging not-completed project/version '{}/{}'".format(project_id,version))
+    logging.info(f"Storage alias: {storage_alias}, ES alias: {es_alias}")
     res = {"purged": False, "project_id": project_id, "version": version}
     ctx = storage_default_client_context.set(storage_alias)
+    self._app.manager.es.switch(es_alias)
     try:
+        result = self._app.manager.es.search_by_project_id(project_id,version)
         if force or not result.get("hits",{}).get("hits",[]):
             # when re-indexing + backend points to a new index, a purge job could
             # find the corresponding documents in ES since it's new index. Yet, these
@@ -88,6 +91,7 @@ def purge_not_completed(self, project_id, version=None, storage_alias=None, forc
     finally:
         # remove lock on the project, if any
         storage_default_client_context.reset(ctx)
+        self._app.manager.es.switch(None)
         self._app.manager.lock_manager.release(project_id,force=True)
 
 
@@ -138,10 +142,12 @@ def clean_stale_projects(self):
 
 
 @task_params(bind=True,name="purge_expired",autoretry_for=RETRYABLE_EXCEPTIONS,default_retry_delay=30)
-def purge_expired(self, project_id, version=None, storage_alias=None, force=False):
+def purge_expired(self, project_id, version=None, storage_alias=None, es_alias=None, force=False):
     logging.warning("Now deleting expired project/version '{}/{}'".format(project_id,version))
+    logging.info(f"Storage alias: {storage_alias}, ES alias: {es_alias}")
     res = {"deleted": False, "project_id": project_id, "version": version}
     ctx = storage_default_client_context.set(storage_alias)
+    self._app.manager.es.switch(es_alias)
     try:
         if force:
             # if force is True, Project/Version permanently deleted from the s3 bucket.
@@ -152,6 +158,7 @@ def purge_expired(self, project_id, version=None, storage_alias=None, force=Fals
             tag = self._app.manager.s3.mark_as_deleteme(project_id,version)
             logging.info("Project {}/{} marked as 'to-be-deleted' (expired/transient): {}".format(project_id,version,tag))
         # Deleting the ES docs though so it's not visible anymore through the API
+
         self._app.manager.es.delete_project(project_id, version)
         res["deleted"] = True
         return res
@@ -161,6 +168,7 @@ def purge_expired(self, project_id, version=None, storage_alias=None, force=Fals
     finally:
         # remove lock on the project, if any
         storage_default_client_context.reset(ctx)
+        self._app.manager.es.switch(None)  # back to default
         self._app.manager.lock_manager.release(project_id,force=True)
 
 

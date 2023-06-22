@@ -727,6 +727,25 @@ class ElasticManager:
 
         return prefix
 
+    def determine_es_alias_from_index_name(self, index_name):
+        """
+        Extract {alias} from index_name following naming convention:
+        {api_name}-{env}-{alias}-{timestamps}
+        If alias can't be extracted, returns None.
+        """
+        prefix = self.get_index_name_prefix()
+        tmp = index_name.replace(prefix,"")
+        # we should get "-{alias}-{timestamp}"
+        if not tmp.startswith("-"):
+            return None
+        tmp = tmp.lstrip("-")
+        tmp = "-".join(tmp.split("-")[:-1])
+        if tmp.startswith("-") or tmp.endswith("-"):
+            return None
+
+        return tmp
+
+
     def list_indices(self):
         """
         Return all indices per alias, including old indices not served anymore.
@@ -752,14 +771,12 @@ class ElasticManager:
                 "settings": index_def["settings"]["index"],
             }
             active = index_name in self.active_indices
-            alias = [alias for alias,ecl in self.clients.items() if ecl.index_name == index_name]
-            if alias:
-                assert len(alias) == 1, f"Can't obtain ES client managing index {index_name!r}"
-                alias = alias.pop()
-                if active:
-                    results["indices"]["active"][alias] = result
-                else:
-                    results["indices"]["inactive"].setdefault(alias,[]).append(result)
+            alias = self.determine_es_alias_from_index_name(index_name)
+            assert alias
+            if active:
+                results["indices"]["active"][alias] = result
+            else:
+                results["indices"]["inactive"].setdefault(alias,[]).append(result)
         # sort inactive, newer to older
         for alias in results["indices"]["inactive"]:
             results["indices"]["inactive"][alias].sort(key=lambda e: int(e["settings"]["creation_date"]),reverse=True)
