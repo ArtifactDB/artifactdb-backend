@@ -105,7 +105,6 @@ class ElasticsearchJSONResponse(PrettyJSONResponse):
         if self._scroll:
             self.headers["link"] = "<%s>; rel=more" % self._scroll
 
-
     def clean(self, doc, remove_fields):
         if not doc:
             # this happens when doc has no permissions at all

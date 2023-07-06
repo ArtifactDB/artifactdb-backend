@@ -17,7 +17,7 @@ from artifactdb.utils.jsonpatch import apply_patch
 from artifactdb.utils.jsondiff import make as jsondiff
 from .models import Alias
 from .import NotAllowedException, DEFAULT_BATCH_SIZE
-from .utils import authorize_query
+from .utils import authorize_query, parse_q
 from .scrollers import Scroller
 
 
@@ -408,15 +408,16 @@ class ElasticClient:
         return hits
 
     def _flatten_aggs_list_projects_hits(self, response, per):
+        # response used to be a aggregation output, it's now a collapse one,
+        # adjust the format to maximize backward compat.
         hits = []
-        projects = response["aggregations"]["groupByProject"]["buckets"]
+        projects = response["hits"]["hits"]
         for project in projects:
             dproj = {
-                "project_id": project["key"],
-                "count": project["doc_count"],
+                "project_id": project["fields"]["_extra.project_id"][0],
                 "aggs": []
             }
-            per_fields = project["groupByField"]["buckets"]
+            per_fields = project["inner_hits"]["per"]["hits"]["hits"]
             if not per_fields:
                 continue  # this can happen if no revision at all associated to a project
                           # while this should not happen, or should be very rare, we don't
@@ -424,8 +425,7 @@ class ElasticClient:
                             # so we just skip it
             for field in per_fields:
                 dproj["aggs"].append({
-                    per: field["key"],
-                    "count": field["doc_count"],
+                    per: field["fields"][per][0]
                 })
 
             hits.append(dproj)
@@ -443,8 +443,8 @@ class ElasticClient:
         # finally, the response formatter will include a scroll ID only if total > count (ES always
         # puts a scroll ID, even if not needed so there's this logic added to prevent adding scrolls for
         # nothing). So here's the rule:
-        # - if more than one partication, "total" can be wrong, and can't be relied on
-        # - if more than one partition, we keep this approx. total to engage the scroll ID logic (total > count)
+        # - if more than one partition, "total" can be wrong, and can't be relied on
+        # - if than one partition, we keep this approx. total to engage the scroll ID logic (total > count)
         # - only when there's only one partition we're sure about the total, so we can fix it with = count
         if num_partitions == 1:
             response["hits"]["total"] = {"value": len(hits), "relation": "eq"}
@@ -586,60 +586,58 @@ class ElasticClient:
             logging.debug("Bulk index, batch contains {} documents".format(len(chunk)))
             bulk(self.client,chunk, refresh=refresh)
 
-    def list_projects(self, q_obj, order="asc", per="_extra.version", index=None, scroll="2m", num_partitions=None, **kwargs):
+    def list_projects(self, q_obj, order="asc", per="_extra.version", index=None, scroll="2m", from_=0, **kwargs):
         index = index or self.index_name
         auth_q = authorize_query(q_obj)
-        # if size was passed, it now has to be about the project of project
-        # otherwise we get some hits outside of aggs results we don't care about
         aggs_size = auth_q.to_dict().get("size",self.cfg.default_returned_results)
-        auth_q = auth_q.extra(size=0)
-        auth_q = auth_q.extra(track_total_hits=True)
-        # find best number of partitions for that query. Partitions (page in pagination)
-        # are based on project, not documents, in that search latest query
-        orig_num_partitions = num_partitions
-        num_partitions = num_partitions or self._find_num_partitions(auth_q,"_extra.project_id",aggs_size,index=index)
-        if num_partitions == 0:
-            # there's no partition at all, meaning no results
-            return {"hits": {"hits": [], "total": {"value": 0}}}
-
-        # first bucket: per project
-        by_project_args = dict(
-            name="groupByProject",
-            agg_type="terms",
-            field="_extra.project_id",
-            include={
-                "partition":0,
-                "num_partitions": num_partitions,
-            },
-            size=aggs_size,
-            order={"_key": order}
-        )
-        by_project = auth_q.aggs.bucket(**by_project_args)
-
-        # then, for each project, we pick the max revision
-        _ = by_project.bucket(
-            name="groupByField",
-            agg_type="terms",
-            field=per,
-        )
-
-        # return aggregations hits, same kind of output as search()
+        auth_q = auth_q.extra(size=aggs_size)
+        # using collapse query, with from: field for pagination, assuming index.max_result_window value is greater then
+        # number of projects (can be adjusted as index setting)
+        auth_q = auth_q.extra(collapse={
+            "field": "_extra.project_id",
+            "inner_hits": {
+                "_source": False,
+                "name": "per",
+                "size": 1024,  # Max version per project (we need a hard limit for the query)
+                "collapse": {
+                    "field": per,
+                }
+            }
+        })
+        # sort by project ID
+        auth_q = auth_q.sort({
+            "_extra.project_id": order,
+            "_extra.id": order,
+        })
+        # starting from... (scroll method will adjust need param to paginate)
+        auth_q = auth_q.extra(**{"from":from_})
+        # total count can be achieved with a cardinality aggregation
+        auth_q.aggs.bucket("total","cardinality",field="_extra.project_id")
         logging.debug("list projects/versions: {}".format(json.dumps(auth_q.to_dict())))
-        response = self.client.search(body=auth_q.to_dict(),index=index,**kwargs)
-        # check if some docs aren't considered because of unbalanced size/partitions
-        not_counted = response["aggregations"]["groupByProject"]["sum_other_doc_count"]
-        if not_counted:
-            # try to increase number of partitions (empirical)
-            logging.warning("Found {} documents not considered in aggregation, increasing num_partitions".format(not_counted))
-            if orig_num_partitions:
-                logging.error("Can't increase, already did it... returning what current results anyways")
-            else:
-                return self.list_projects(q_obj=q_obj,order=order,per=per,index=index,
-                                          scroll=scroll,num_partitions=num_partitions+1,**kwargs)
-
+        # _source: not returning content of the docs, not needed, we have the project IDs in the collapse section
+        response = self.client.search(body=auth_q.to_dict(), index=index, _source=False, **kwargs)
         hits = self._flatten_aggs_list_projects_hits(response, per)
-        scroll_kwargs = {"q": auth_q.to_dict(), "index": index, "per": per}
-        response = self._prepare_aggs_response_with_scroll(response,hits,"scroll_list_projects",scroll_kwargs,num_partitions)
+        response["hits"]["hits"] = hits
+        # adjust total field so the response formatter keeps the one from aggragration (which is correct, total # of
+        # projects) and not the original one (which is incorrect, total # of documents)
+        response["hits"]["total"] = response["aggregations"]["total"]
+        response.pop("aggregations")  # not needed anymore
+        # determine if a scroll is needed: first but not having everything or subsequent call with more pages needed
+        if from_ == 0 and aggs_size < response["hits"]["total"]["value"]:
+            # rebuild original arguments to allowed calling list_projects() from the scrolling method
+            # marshalling arguments to be stored in the scroll
+            scroll_id = self.scroller.generate(
+                "scroll_list_projects",
+                {
+                    "q": q_obj.to_dict()["query"]["query_string"]["query"],
+                    "size": aggs_size,
+                    "index": index,
+                    "per": per,
+                    "order": order,
+                    "from_": from_ + aggs_size,
+                }
+            )
+            response["_custom_scroll_id"] = scroll_id
 
         return response
 
@@ -718,8 +716,18 @@ class ElasticClient:
         assert self.scroller, "No scroller set, can't handle scroll"
         kwargs = self.scroller.get(scroll_id)
         per = kwargs["per"]
-        pfunc = partial(self._flatten_aggs_list_projects_hits,per=per)
-        return self._scroll_aggregations(scroll_id,"groupByProject",pfunc,extra_scroll_kwargs={"per": per})
+        query = parse_q(kwargs.pop("q"),index_name=kwargs["index"])
+        query = query.extra(size=kwargs["size"])
+        kwargs["q_obj"] = query
+        response = self.list_projects(**kwargs)
+        kwargs["from_"] += kwargs["size"]  # increment to next page
+        # back to marshalled query
+        kwargs["q"] = query.to_dict()["query"]["query_string"]["query"]
+        kwargs.pop("q_obj")
+        self.scroller.set(scroll_id, kwargs)
+        response["_custom_scroll_id"] = scroll_id
+
+        return response
 
 
 # some dirty overriding of methods without caring about args/kwargs, it's a dummy client
