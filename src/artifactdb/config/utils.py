@@ -167,6 +167,11 @@ def redact_uri(uri):
     if puri.port:
         fmt += ":{}"
         args.append(puri.port)
+    if puri.query:
+        if "access_token" in puri.query:
+            token = str(puri.query.split("access_token=")[1])
+            puri = puri._replace(query=puri.query.replace(token, f"{token[:3]}******"))
+
     newuri = puri._replace(netloc=fmt.format(*args))
 
     return newuri.geturl()
