@@ -20,6 +20,7 @@ class SchemaClientError(Exception): pass
 class SchemaNotFoundError(Exception): pass
 class NoSchemaError(Exception): pass
 class ValidationError(Exception): pass
+class SchemaNameError(Exception): pass
 
 
 class SchemaClientManager:
@@ -134,7 +135,12 @@ class SchemaClientManager:
         if not isinstance(doc,dict) or not doc:
             raise TypeError("Document is not a dict or is empty")
         if doc.get("$schema"):
-            schema_name, schema_version = doc["$schema"].split("/")
+            try:
+                schema_name, schema_version = doc["$schema"].split("/")
+            except ValueError:
+                raise SchemaNameError(f"Schema name and version couldn't be determined because of wrong format."
+                                      f" Please use <schema_name>/<schema_version> format.")
+
             schema = self.get_schema(schema_name, schema_version)
             if schema:
                 try:

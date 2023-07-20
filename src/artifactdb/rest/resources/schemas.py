@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, validator
 
 from artifactdb.rest.resources import APIErrorException, APIError, ResourceBase, NotAuthenticated, Forbidden
 from artifactdb.utils.misc import get_root_url
-from artifactdb.db.schema import ValidationError, NoSchemaError, SchemaNotFoundError
+from artifactdb.db.schema import ValidationError, NoSchemaError, SchemaNotFoundError, SchemaNameError
 
 
 class Documents(BaseModel):
@@ -200,6 +200,8 @@ class SchemasResource(ResourceBase):
             except ValidationError as e:
                 raise APIErrorException(422, status="error", reason="Document Validation Error: %s" % str(e))
             except TypeError as e:
+                raise APIErrorException(400, status="error", reason="%s" % str(e))
+            except SchemaNameError as e:
                 raise APIErrorException(400, status="error", reason="%s" % str(e))
 
         @cls.router.delete("/schema/cache",
