@@ -228,3 +228,15 @@ async def open_log_request(celery_app, project_id, version=None, subject="", clo
                                                 "attrs_when_closed": attrs_when_closed})
         return task_id
 
+
+def generate_swagger_url(request):
+    # Blatant duplication of code
+    forwarded = request.headers.get("x-forwarded-prefix")
+    replaced = request.headers.get("x-replaced-path")
+    swagger_url = str(request.url).rstrip("/")
+    swagger_url += forwarded or replaced or "/"
+    if not swagger_url.endswith("/"):
+        swagger_url += "/"
+    swagger_url += "__swagger__"
+
+    return swagger_url

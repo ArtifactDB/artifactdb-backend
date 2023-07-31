@@ -1,7 +1,7 @@
 from fastapi import Depends, Request
 
 from artifactdb.rest.resources import ResourceBase
-
+from artifactdb.rest.helpers import generate_swagger_url
 
 class InfoResource(ResourceBase):
 
@@ -14,14 +14,7 @@ class InfoResource(ResourceBase):
             request: Request,
             cfg = Depends(cls.deps.get_cfg),
         ):
-            forwarded = request.headers.get("x-forwarded-prefix")
-            replaced = request.headers.get("x-replaced-path")
-            swagger_url = str(request.url).rstrip("/")
-            swagger_url += forwarded or replaced or "/"
-            if not swagger_url.endswith("/"):
-                swagger_url += "/"
-            swagger_url += "__swagger__"
-
+            swagger_url = generate_swagger_url(request)
             # auth clients: main (the one used in swagger, principal), and alternate/others
             # main is part of known clients, but we want separate category
             others = set(cfg.auth.clients.known).difference({cfg.auth.oidc.client_id})
@@ -43,7 +36,8 @@ class InfoResource(ResourceBase):
                         "others": others,
                     },
                     "well-known": cfg.auth.oidc.well_known.to_dict(),
-                }
+                },
+                "storage": cfg.storage.to_dict(),
             }
             # project prefixes
             legacy = getattr(cfg,"sequence",[])
