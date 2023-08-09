@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name,redefined-builtin  # `id` as a file ID
 import logging
 import base64
+import json
 
 from pydantic import BaseModel, Field, HttpUrl
 from elasticsearch import NotFoundError
@@ -10,7 +11,7 @@ from fastapi.responses import JSONResponse
 
 from artifactdb.rest.resources import APIErrorException, APIError, Forbidden, NotAuthenticated, \
                                  ResourceBase, ElasticsearchJSONResponse
-from artifactdb.identifiers.aid import MalformedID
+from artifactdb.identifiers.aid import MalformedID, generate_key, unpack_id
 from artifactdb.backend.components.storages import InvalidLinkError
 
 
@@ -49,7 +50,10 @@ class FilesResource(ResourceBase):
                            '"latest" or "LATEST" can be used to access the latest available version'),
             follow_link:bool = Query(False,description="If the artifact is a link to another target artifact, " + \
                                      "returns the target metadata"),
+            raw:bool = Query(False,description="Return raw metadata file from S3 (originally uploaded), " + \
+                             "instead of the indexed one"),
             es = Depends(cls.deps.get_es_client),
+            s3 = Depends(cls.deps.get_s3_client),
             _:str = Depends(cls.deps.get_authorizer()),
         ):
             try:
@@ -60,7 +64,20 @@ class FilesResource(ResourceBase):
                 doc = es.fetch_by_id(id,follow_link=follow_link)
                 if not doc:
                     raise NotFoundError(404,"No such file")
-                return ElasticsearchJSONResponse(content=doc)
+                if raw:
+                    parts = unpack_id(id)
+                    # make sure we point to a the metadata file
+                    parts["path"] = doc._extra.metapath
+                    key = generate_key(parts)
+                    data, _ = s3.download(key)
+                    doc = json.loads(data)
+                    return doc
+                else:
+                    return ElasticsearchJSONResponse(content=doc)
+            except json.JSONDecodeError as e:
+                raise APIErrorException(422, status="error", reason="Unable to parse raw metadata file as JSON")
+            except s3.client.exceptions.NoSuchKey as e:
+                raise APIErrorException(404, status="error", reason="Unable to find raw metadata file")
             except NotFoundError as e:
                 raise APIErrorException(e.status_code, status="error", reason=e.error)
 
